@@ -25,20 +25,20 @@
 static GCtab *lib_create_table(lua_State *L, const char *libname, int hsize)
 {
   if (libname) {
-    luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 16);
-    lua_getfield(L, -1, libname);
+    luaL_findtable_hack(L, LUA_REGISTRYINDEX, "_LOADED", 16);
+    lua_getfield_hack(L, -1, libname);
     if (!tvistab(L->top-1)) {
       L->top--;
-      if (luaL_findtable(L, LUA_GLOBALSINDEX, libname, hsize) != NULL)
+      if (luaL_findtable_hack(L, LUA_GLOBALSINDEX, libname, hsize) != NULL)
 	lj_err_callerv(L, LJ_ERR_BADMODN, libname);
       settabV(L, L->top, tabV(L->top-1));
       L->top++;
-      lua_setfield(L, -3, libname);  /* _LOADED[libname] = new table */
+      lua_setfield_hack(L, -3, libname);  /* _LOADED[libname] = new table */
     }
     L->top--;
     settabV(L, L->top-1, tabV(L->top));
   } else {
-    lua_createtable(L, 0, hsize);
+    lua_createtable_hack(L, 0, hsize);
   }
   return tabV(L->top-1);
 }

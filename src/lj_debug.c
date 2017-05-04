@@ -405,9 +405,9 @@ void lj_debug_pushloc(lua_State *L, GCproto *pt, BCPos pc)
 
 /* -- Public debug API ---------------------------------------------------- */
 
-/* lua_getupvalue() and lua_setupvalue() are in lj_api.c. */
+/* lua_getupvalue_hack() and lua_setupvalue_hack() are in lj_api.c. */
 
-LUA_API const char *lua_getlocal(lua_State *L, const lua_Debug *ar, int n)
+LUA_API const char *lua_getlocal_hack(lua_State *L, const lua_Debug *ar, int n)
 {
   const char *name = NULL;
   if (ar) {
@@ -422,7 +422,7 @@ LUA_API const char *lua_getlocal(lua_State *L, const lua_Debug *ar, int n)
   return name;
 }
 
-LUA_API const char *lua_setlocal(lua_State *L, const lua_Debug *ar, int n)
+LUA_API const char *lua_setlocal_hack(lua_State *L, const lua_Debug *ar, int n)
 {
   const char *name = NULL;
   TValue *o = debug_localname(L, ar, &name, (BCReg)n);
@@ -534,12 +534,12 @@ int lj_debug_getinfo(lua_State *L, const char *what, lj_Debug *ar, int ext)
   return 1;  /* Ok. */
 }
 
-LUA_API int lua_getinfo(lua_State *L, const char *what, lua_Debug *ar)
+LUA_API int lua_getinfo_hack(lua_State *L, const char *what, lua_Debug *ar)
 {
   return lj_debug_getinfo(L, what, (lj_Debug *)ar, 0);
 }
 
-LUA_API int lua_getstack(lua_State *L, int level, lua_Debug *ar)
+LUA_API int lua_getstack_hack(lua_State *L, int level, lua_Debug *ar)
 {
   int size;
   cTValue *frame = lj_debug_frame(L, level, &size);
@@ -556,50 +556,50 @@ LUA_API int lua_getstack(lua_State *L, int level, lua_Debug *ar)
 #define TRACEBACK_LEVELS1	12
 #define TRACEBACK_LEVELS2	10
 
-LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1, const char *msg,
+LUALIB_API void luaL_traceback_hack (lua_State *L, lua_State *L1, const char *msg,
 				int level)
 {
   int top = (int)(L->top - L->base);
   int lim = TRACEBACK_LEVELS1;
   lua_Debug ar;
-  if (msg) lua_pushfstring(L, "%s\n", msg);
+  if (msg) lua_pushfstring_hack(L, "%s\n", msg);
   lua_pushliteral(L, "stack traceback:");
-  while (lua_getstack(L1, level++, &ar)) {
+  while (lua_getstack_hack(L1, level++, &ar)) {
     GCfunc *fn;
     if (level > lim) {
-      if (!lua_getstack(L1, level + TRACEBACK_LEVELS2, &ar)) {
+      if (!lua_getstack_hack(L1, level + TRACEBACK_LEVELS2, &ar)) {
 	level--;
       } else {
 	lua_pushliteral(L, "\n\t...");
-	lua_getstack(L1, -10, &ar);
+	lua_getstack_hack(L1, -10, &ar);
 	level = ar.i_ci - TRACEBACK_LEVELS2;
       }
       lim = 2147483647;
       continue;
     }
-    lua_getinfo(L1, "Snlf", &ar);
+    lua_getinfo_hack(L1, "Snlf", &ar);
     fn = funcV(L1->top-1); L1->top--;
     if (isffunc(fn) && !*ar.namewhat)
-      lua_pushfstring(L, "\n\t[builtin#%d]:", fn->c.ffid);
+      lua_pushfstring_hack(L, "\n\t[builtin#%d]:", fn->c.ffid);
     else
-      lua_pushfstring(L, "\n\t%s:", ar.short_src);
+      lua_pushfstring_hack(L, "\n\t%s:", ar.short_src);
     if (ar.currentline > 0)
-      lua_pushfstring(L, "%d:", ar.currentline);
+      lua_pushfstring_hack(L, "%d:", ar.currentline);
     if (*ar.namewhat) {
-      lua_pushfstring(L, " in function " LUA_QS, ar.name);
+      lua_pushfstring_hack(L, " in function " LUA_QS, ar.name);
     } else {
       if (*ar.what == 'm') {
 	lua_pushliteral(L, " in main chunk");
       } else if (*ar.what == 'C') {
-	lua_pushfstring(L, " at %p", fn->c.f);
+	lua_pushfstring_hack(L, " at %p", fn->c.f);
       } else {
-	lua_pushfstring(L, " in function <%s:%d>",
+	lua_pushfstring_hack(L, " in function <%s:%d>",
 			ar.short_src, ar.linedefined);
       }
     }
     if ((int)(L->top - L->base) - top >= 15)
-      lua_concat(L, (int)(L->top - L->base) - top);
+      lua_concat_hack(L, (int)(L->top - L->base) - top);
   }
-  lua_concat(L, (int)(L->top - L->base) - top);
+  lua_concat_hack(L, (int)(L->top - L->base) - top);
 }
 

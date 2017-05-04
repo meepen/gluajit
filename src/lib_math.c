@@ -218,15 +218,15 @@ LJLIB_CF(math_randomseed)
 
 #include "lj_libdef.h"
 
-LUALIB_API int luaopen_math(lua_State *L)
+LUALIB_API int luaopen_math_hack(lua_State *L)
 {
   RandomState *rs;
-  rs = (RandomState *)lua_newuserdata(L, sizeof(RandomState));
+  rs = (RandomState *)lua_newuserdata_hack(L, sizeof(RandomState));
   rs->valid = 0;  /* Use lazy initialization to save some time on startup. */
   LJ_LIB_REG(L, LUA_MATHLIBNAME, math);
 #if defined(LUA_COMPAT_MOD) && !LJ_52
-  lua_getfield(L, -1, "fmod");
-  lua_setfield(L, -2, "mod");
+  lua_getfield_hack(L, -1, "fmod");
+  lua_setfield_hack(L, -2, "mod");
 #endif
   return 1;
 }

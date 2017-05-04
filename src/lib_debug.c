@@ -32,7 +32,7 @@ LJLIB_CF(debug_getregistry)
 LJLIB_CF(debug_getmetatable)
 {
   lj_lib_checkany(L, 1);
-  if (!lua_getmetatable(L, 1)) {
+  if (!lua_getmetatable_hack(L, 1)) {
     setnilV(L->top-1);
   }
   return 1;
@@ -42,7 +42,7 @@ LJLIB_CF(debug_setmetatable)
 {
   lj_lib_checktabornil(L, 2);
   L->top = L->base+2;
-  lua_setmetatable(L, 1);
+  lua_setmetatable_hack(L, 1);
 #if !LJ_52
   setboolV(L->top-1, 1);
 #endif
@@ -52,7 +52,7 @@ LJLIB_CF(debug_setmetatable)
 LJLIB_CF(debug_getfenv)
 {
   lj_lib_checkany(L, 1);
-  lua_getfenv(L, 1);
+  lua_getfenv_hack(L, 1);
   return 1;
 }
 
@@ -60,7 +60,7 @@ LJLIB_CF(debug_setfenv)
 {
   lj_lib_checktab(L, 2);
   L->top = L->base+2;
-  if (!lua_setfenv(L, 1))
+  if (!lua_setfenv_hack(L, 1))
     lj_err_caller(L, LJ_ERR_SETFENV);
   return 1;
 }
@@ -69,20 +69,20 @@ LJLIB_CF(debug_setfenv)
 
 static void settabss(lua_State *L, const char *i, const char *v)
 {
-  lua_pushstring(L, v);
-  lua_setfield(L, -2, i);
+  lua_pushstring_hack(L, v);
+  lua_setfield_hack(L, -2, i);
 }
 
 static void settabsi(lua_State *L, const char *i, int v)
 {
-  lua_pushinteger(L, v);
-  lua_setfield(L, -2, i);
+  lua_pushinteger_hack(L, v);
+  lua_setfield_hack(L, -2, i);
 }
 
 static void settabsb(lua_State *L, const char *i, int v)
 {
-  lua_pushboolean(L, v);
-  lua_setfield(L, -2, i);
+  lua_pushboolean_hack(L, v);
+  lua_setfield_hack(L, -2, i);
 }
 
 static lua_State *getthread(lua_State *L, int *arg)
@@ -99,12 +99,12 @@ static lua_State *getthread(lua_State *L, int *arg)
 static void treatstackoption(lua_State *L, lua_State *L1, const char *fname)
 {
   if (L == L1) {
-    lua_pushvalue(L, -2);
-    lua_remove(L, -3);
+    lua_pushvalue_hack(L, -2);
+    lua_remove_hack(L, -3);
   }
   else
-    lua_xmove(L1, L, 1);
-  lua_setfield(L, -2, fname);
+    lua_xmove_hack(L1, L, 1);
+  lua_setfield_hack(L, -2, fname);
 }
 
 LJLIB_CF(debug_getinfo)
@@ -113,20 +113,20 @@ LJLIB_CF(debug_getinfo)
   int arg, opt_f = 0, opt_L = 0;
   lua_State *L1 = getthread(L, &arg);
   const char *options = luaL_optstring(L, arg+2, "flnSu");
-  if (lua_isnumber(L, arg+1)) {
-    if (!lua_getstack(L1, (int)lua_tointeger(L, arg+1), (lua_Debug *)&ar)) {
+  if (lua_isnumber_hack(L, arg+1)) {
+    if (!lua_getstack_hack(L1, (int)lua_tointeger_hack(L, arg+1), (lua_Debug *)&ar)) {
       setnilV(L->top-1);
       return 1;
     }
   } else if (L->base+arg < L->top && tvisfunc(L->base+arg)) {
-    options = lua_pushfstring(L, ">%s", options);
+    options = lua_pushfstring_hack(L, ">%s", options);
     setfuncV(L1, L1->top++, funcV(L->base+arg));
   } else {
     lj_err_arg(L, arg+1, LJ_ERR_NOFUNCL);
   }
   if (!lj_debug_getinfo(L1, options, &ar, 1))
     lj_err_arg(L, arg+2, LJ_ERR_INVOPT);
-  lua_createtable(L, 0, 16);  /* Create result table. */
+  lua_createtable_hack(L, 0, 16);  /* Create result table. */
   for (; *options; options++) {
     switch (*options) {
     case 'S':
@@ -167,16 +167,16 @@ LJLIB_CF(debug_getlocal)
   int slot = lj_lib_checkint(L, arg+2);
   if (tvisfunc(L->base+arg)) {
     L->top = L->base+arg+1;
-    lua_pushstring(L, lua_getlocal(L, NULL, slot));
+    lua_pushstring_hack(L, lua_getlocal_hack(L, NULL, slot));
     return 1;
   }
-  if (!lua_getstack(L1, lj_lib_checkint(L, arg+1), &ar))
+  if (!lua_getstack_hack(L1, lj_lib_checkint(L, arg+1), &ar))
     lj_err_arg(L, arg+1, LJ_ERR_LVLRNG);
-  name = lua_getlocal(L1, &ar, slot);
+  name = lua_getlocal_hack(L1, &ar, slot);
   if (name) {
-    lua_xmove(L1, L, 1);
-    lua_pushstring(L, name);
-    lua_pushvalue(L, -2);
+    lua_xmove_hack(L1, L, 1);
+    lua_pushstring_hack(L, name);
+    lua_pushvalue_hack(L, -2);
     return 2;
   } else {
     setnilV(L->top-1);
@@ -190,11 +190,11 @@ LJLIB_CF(debug_setlocal)
   lua_State *L1 = getthread(L, &arg);
   lua_Debug ar;
   TValue *tv;
-  if (!lua_getstack(L1, lj_lib_checkint(L, arg+1), &ar))
+  if (!lua_getstack_hack(L1, lj_lib_checkint(L, arg+1), &ar))
     lj_err_arg(L, arg+1, LJ_ERR_LVLRNG);
   tv = lj_lib_checkany(L, arg+3);
   copyTV(L1, L1->top++, tv);
-  lua_pushstring(L, lua_setlocal(L1, &ar, lj_lib_checkint(L, arg+2)));
+  lua_pushstring_hack(L, lua_setlocal_hack(L1, &ar, lj_lib_checkint(L, arg+2)));
   return 1;
 }
 
@@ -203,9 +203,9 @@ static int debug_getupvalue(lua_State *L, int get)
   int32_t n = lj_lib_checkint(L, 2);
   const char *name;
   lj_lib_checkfunc(L, 1);
-  name = get ? lua_getupvalue(L, 1, n) : lua_setupvalue(L, 1, n);
+  name = get ? lua_getupvalue_hack(L, 1, n) : lua_setupvalue_hack(L, 1, n);
   if (name) {
-    lua_pushstring(L, name);
+    lua_pushstring_hack(L, name);
     if (!get) return 1;
     copyTV(L, L->top, L->top-2);
     L->top++;
@@ -276,7 +276,7 @@ LJLIB_CF(debug_setuservalue)
   if (!(o+1 < L->top && tvistab(o+1)))
     lj_err_argt(L, 2, LUA_TTABLE);
   L->top = o+2;
-  lua_setfenv(L, 1);
+  lua_setfenv_hack(L, 1);
   return 1;
 }
 #endif
@@ -289,14 +289,14 @@ static void hookf(lua_State *L, lua_Debug *ar)
 {
   static const char *const hooknames[] =
     {"call", "return", "line", "count", "tail return"};
-  lua_pushlightuserdata(L, (void *)&KEY_HOOK);
-  lua_rawget(L, LUA_REGISTRYINDEX);
+  lua_pushlightuserdata_hack(L, (void *)&KEY_HOOK);
+  lua_rawget_hack(L, LUA_REGISTRYINDEX);
   if (lua_isfunction(L, -1)) {
-    lua_pushstring(L, hooknames[(int)ar->event]);
+    lua_pushstring_hack(L, hooknames[(int)ar->event]);
     if (ar->currentline >= 0)
-      lua_pushinteger(L, ar->currentline);
-    else lua_pushnil(L);
-    lua_call(L, 2, 0);
+      lua_pushinteger_hack(L, ar->currentline);
+    else lua_pushnil_hack(L);
+    lua_call_hack(L, 2, 0);
   }
 }
 
@@ -326,34 +326,34 @@ LJLIB_CF(debug_sethook)
   lua_Hook func;
   (void)getthread(L, &arg);
   if (lua_isnoneornil(L, arg+1)) {
-    lua_settop(L, arg+1);
+    lua_settop_hack(L, arg+1);
     func = NULL; mask = 0; count = 0;  /* turn off hooks */
   } else {
     const char *smask = luaL_checkstring(L, arg+2);
-    luaL_checktype(L, arg+1, LUA_TFUNCTION);
+    luaL_checktype_hack(L, arg+1, LUA_TFUNCTION);
     count = luaL_optint(L, arg+3, 0);
     func = hookf; mask = makemask(smask, count);
   }
-  lua_pushlightuserdata(L, (void *)&KEY_HOOK);
-  lua_pushvalue(L, arg+1);
-  lua_rawset(L, LUA_REGISTRYINDEX);
-  lua_sethook(L, func, mask, count);
+  lua_pushlightuserdata_hack(L, (void *)&KEY_HOOK);
+  lua_pushvalue_hack(L, arg+1);
+  lua_rawset_hack(L, LUA_REGISTRYINDEX);
+  lua_sethook_hack(L, func, mask, count);
   return 0;
 }
 
 LJLIB_CF(debug_gethook)
 {
   char buff[5];
-  int mask = lua_gethookmask(L);
-  lua_Hook hook = lua_gethook(L);
+  int mask = lua_gethookmask_hack(L);
+  lua_Hook hook = lua_gethook_hack(L);
   if (hook != NULL && hook != hookf) {  /* external hook? */
     lua_pushliteral(L, "external hook");
   } else {
-    lua_pushlightuserdata(L, (void *)&KEY_HOOK);
-    lua_rawget(L, LUA_REGISTRYINDEX);   /* get hook */
+    lua_pushlightuserdata_hack(L, (void *)&KEY_HOOK);
+    lua_rawget_hack(L, LUA_REGISTRYINDEX);   /* get hook */
   }
-  lua_pushstring(L, unmakemask(mask, buff));
-  lua_pushinteger(L, lua_gethookcount(L));
+  lua_pushstring_hack(L, unmakemask(mask, buff));
+  lua_pushinteger_hack(L, lua_gethookcount_hack(L));
   return 3;
 }
 
@@ -367,12 +367,12 @@ LJLIB_CF(debug_debug)
     if (fgets(buffer, sizeof(buffer), stdin) == 0 ||
 	strcmp(buffer, "cont\n") == 0)
       return 0;
-    if (luaL_loadbuffer(L, buffer, strlen(buffer), "=(debug command)") ||
-	lua_pcall(L, 0, 0, 0)) {
+    if (luaL_loadbuffer_hack(L, buffer, strlen(buffer), "=(debug command)") ||
+	lua_pcall_hack(L, 0, 0, 0)) {
       fputs(lua_tostring(L, -1), stderr);
       fputs("\n", stderr);
     }
-    lua_settop(L, 0);  /* remove eventual returns */
+    lua_settop_hack(L, 0);  /* remove eventual returns */
   }
 }
 
@@ -389,7 +389,7 @@ LJLIB_CF(debug_traceback)
   if (msg == NULL && L->top > L->base+arg)
     L->top = L->base+arg+1;
   else
-    luaL_traceback(L, L1, msg, lj_lib_optint(L, arg+2, (L == L1)));
+    luaL_traceback_hack(L, L1, msg, lj_lib_optint(L, arg+2, (L == L1)));
   return 1;
 }
 
@@ -397,7 +397,7 @@ LJLIB_CF(debug_traceback)
 
 #include "lj_libdef.h"
 
-LUALIB_API int luaopen_debug(lua_State *L)
+LUALIB_API int luaopen_debug_hack(lua_State *L)
 {
   LJ_LIB_REG(L, LUA_DBLIBNAME, debug);
   return 1;

@@ -167,27 +167,27 @@ typedef const char*(*lua_Reader)(lua_State*L,void*ud,size_t*sz);
 typedef void*(*lua_Alloc)(void*ud,void*ptr,size_t osize,size_t nsize);
 typedef double lua_Number;
 typedef ptrdiff_t lua_Integer;
-static void lua_settop(lua_State*L,int idx);
-static int lua_type(lua_State*L,int idx);
-static const char* lua_tolstring(lua_State*L,int idx,size_t*len);
-static size_t lua_objlen(lua_State*L,int idx);
-static void lua_pushlstring(lua_State*L,const char*s,size_t l);
-static void lua_pushcclosure(lua_State*L,lua_CFunction fn,int n);
-static void lua_createtable(lua_State*L,int narr,int nrec);
-static void lua_setfield(lua_State*L,int idx,const char*k);
-#define lua_pop(L,n)lua_settop(L,-(n)-1)
-#define lua_newtable(L)lua_createtable(L,0,0)
-#define lua_pushcfunction(L,f)lua_pushcclosure(L,(f),0)
-#define lua_strlen(L,i)lua_objlen(L,(i))
-#define lua_isfunction(L,n)(lua_type(L,(n))==6)
-#define lua_istable(L,n)(lua_type(L,(n))==5)
-#define lua_isnil(L,n)(lua_type(L,(n))==0)
-#define lua_isboolean(L,n)(lua_type(L,(n))==1)
-#define lua_isnone(L,n)(lua_type(L,(n))==(-1))
-#define lua_isnoneornil(L,n)(lua_type(L,(n))<=0)
-#define lua_pushliteral(L,s)lua_pushlstring(L,""s,(sizeof(s)/sizeof(char))-1)
-#define lua_setglobal(L,s)lua_setfield(L,(-10002),(s))
-#define lua_tostring(L,i)lua_tolstring(L,(i),NULL)
+static void lua_settop_hack(lua_State*L,int idx);
+static int lua_type_hack(lua_State*L,int idx);
+static const char* lua_tolstring_hack(lua_State*L,int idx,size_t*len);
+static size_t lua_objlen_hack(lua_State*L,int idx);
+static void lua_pushlstring_hack(lua_State*L,const char*s,size_t l);
+static void lua_pushcclosure_hack(lua_State*L,lua_CFunction fn,int n);
+static void lua_createtable_hack(lua_State*L,int narr,int nrec);
+static void lua_setfield_hack(lua_State*L,int idx,const char*k);
+#define lua_pop(L,n)lua_settop_hack(L,-(n)-1)
+#define lua_newtable(L)lua_createtable_hack(L,0,0)
+#define lua_pushcfunction(L,f)lua_pushcclosure_hack(L,(f),0)
+#define lua_strlen(L,i)lua_objlen_hack(L,(i))
+#define lua_isfunction(L,n)(lua_type_hack(L,(n))==6)
+#define lua_istable(L,n)(lua_type_hack(L,(n))==5)
+#define lua_isnil(L,n)(lua_type_hack(L,(n))==0)
+#define lua_isboolean(L,n)(lua_type_hack(L,(n))==1)
+#define lua_isnone(L,n)(lua_type_hack(L,(n))==(-1))
+#define lua_isnoneornil(L,n)(lua_type_hack(L,(n))<=0)
+#define lua_pushliteral(L,s)lua_pushlstring_hack(L,""s,(sizeof(s)/sizeof(char))-1)
+#define lua_setglobal(L,s)lua_setfield_hack(L,(-10002),(s))
+#define lua_tostring(L,i)lua_tolstring_hack(L,(i),NULL)
 typedef struct lua_Debug lua_Debug;
 typedef void(*lua_Hook)(lua_State*L,lua_Debug*ar);
 struct lua_Debug{
@@ -2323,7 +2323,7 @@ luaF_close(L1,L1->stack);
 freestack(L,L1);
 luaM_freemem(L,fromstate(L1),state_size(lua_State));
 }
-static lua_State*lua_newstate(lua_Alloc f,void*ud){
+static lua_State*lua_newstate_hack(lua_Alloc f,void*ud){
 int i;
 lua_State*L;
 global_State*g;
@@ -2374,7 +2374,7 @@ static void callallgcTM(lua_State*L,void*ud){
 UNUSED(ud);
 luaC_callGCTM(L);
 }
-static void lua_close(lua_State*L){
+static void lua_close_hack(lua_State*L){
 L=G(L)->mainthread;
 luaF_close(L,L->stack);
 luaC_separateudata(L,1);
@@ -2407,7 +2407,7 @@ return-1;
 else
 return getline_(ci_func(ci)->l.p,pc);
 }
-static int lua_getstack(lua_State*L,int level,lua_Debug*ar){
+static int lua_getstack_hack(lua_State*L,int level,lua_Debug*ar){
 int status;
 CallInfo*ci;
 for(ci=L->ci;level>0&&ci>L->base_ci;ci--){
@@ -2503,7 +2503,7 @@ default:status=0;
 }
 return status;
 }
-static int lua_getinfo(lua_State*L,const char*what,lua_Debug*ar){
+static int lua_getinfo_hack(lua_State*L,const char*what,lua_Debug*ar){
 int status;
 Closure*f=NULL;
 CallInfo*ci=NULL;
@@ -5346,7 +5346,7 @@ Closure*func=curr_func(L);
 return func->c.env;
 }
 }
-static int lua_checkstack(lua_State*L,int size){
+static int lua_checkstack_hack(lua_State*L,int size){
 int res=1;
 if(size>8000||(L->top-L->base+size)>8000)
 res=0;
@@ -5357,16 +5357,16 @@ L->ci->top=L->top+size;
 }
 return res;
 }
-static lua_CFunction lua_atpanic(lua_State*L,lua_CFunction panicf){
+static lua_CFunction lua_atpanic_hack(lua_State*L,lua_CFunction panicf){
 lua_CFunction old;
 old=G(L)->panic;
 G(L)->panic=panicf;
 return old;
 }
-static int lua_gettop(lua_State*L){
+static int lua_gettop_hack(lua_State*L){
 return cast_int(L->top-L->base);
 }
-static void lua_settop(lua_State*L,int idx){
+static void lua_settop_hack(lua_State*L,int idx){
 if(idx>=0){
 luai_apicheck(L,idx<=L->stack_last-L->base);
 while(L->top<L->base+idx)
@@ -5378,14 +5378,14 @@ luai_apicheck(L,-(idx+1)<=(L->top-L->base));
 L->top+=idx+1;
 }
 }
-static void lua_remove(lua_State*L,int idx){
+static void lua_remove_hack(lua_State*L,int idx){
 StkId p;
 p=index2adr(L,idx);
 api_checkvalidindex(L,p);
 while(++p<L->top)setobj(L,p-1,p);
 L->top--;
 }
-static void lua_insert(lua_State*L,int idx){
+static void lua_insert_hack(lua_State*L,int idx){
 StkId p;
 StkId q;
 p=index2adr(L,idx);
@@ -5393,7 +5393,7 @@ api_checkvalidindex(L,p);
 for(q=L->top;q>p;q--)setobj(L,q,q-1);
 setobj(L,p,L->top);
 }
-static void lua_replace(lua_State*L,int idx){
+static void lua_replace_hack(lua_State*L,int idx){
 StkId o;
 if(idx==(-10001)&&L->ci==L->base_ci)
 luaG_runerror(L,"no calling environment");
@@ -5413,38 +5413,38 @@ luaC_barrier(L,curr_func(L),L->top-1);
 }
 L->top--;
 }
-static void lua_pushvalue(lua_State*L,int idx){
+static void lua_pushvalue_hack(lua_State*L,int idx){
 setobj(L,L->top,index2adr(L,idx));
 api_incr_top(L);
 }
-static int lua_type(lua_State*L,int idx){
+static int lua_type_hack(lua_State*L,int idx){
 StkId o=index2adr(L,idx);
 return(o==(&luaO_nilobject_))?(-1):ttype(o);
 }
-static const char*lua_typename(lua_State*L,int t){
+static const char*lua_typename_hack(lua_State*L,int t){
 UNUSED(L);
 return(t==(-1))?"no value":luaT_typenames[t];
 }
-static int lua_iscfunction(lua_State*L,int idx){
+static int lua_iscfunction_hack(lua_State*L,int idx){
 StkId o=index2adr(L,idx);
 return iscfunction(o);
 }
-static int lua_isnumber(lua_State*L,int idx){
+static int lua_isnumber_hack(lua_State*L,int idx){
 TValue n;
 const TValue*o=index2adr(L,idx);
 return tonumber(o,&n);
 }
-static int lua_isstring(lua_State*L,int idx){
-int t=lua_type(L,idx);
+static int lua_isstring_hack(lua_State*L,int idx){
+int t=lua_type_hack(L,idx);
 return(t==4||t==3);
 }
-static int lua_rawequal(lua_State*L,int index1,int index2){
+static int lua_rawequal_hack(lua_State*L,int index1,int index2){
 StkId o1=index2adr(L,index1);
 StkId o2=index2adr(L,index2);
 return(o1==(&luaO_nilobject_)||o2==(&luaO_nilobject_))?0
 :luaO_rawequalObj(o1,o2);
 }
-static int lua_lessthan(lua_State*L,int index1,int index2){
+static int lua_lessthan_hack(lua_State*L,int index1,int index2){
 StkId o1,o2;
 int i;
 o1=index2adr(L,index1);
@@ -5453,7 +5453,7 @@ i=(o1==(&luaO_nilobject_)||o2==(&luaO_nilobject_))?0
 :luaV_lessthan(L,o1,o2);
 return i;
 }
-static lua_Number lua_tonumber(lua_State*L,int idx){
+static lua_Number lua_tonumber_hack(lua_State*L,int idx){
 TValue n;
 const TValue*o=index2adr(L,idx);
 if(tonumber(o,&n))
@@ -5461,7 +5461,7 @@ return nvalue(o);
 else
 return 0;
 }
-static lua_Integer lua_tointeger(lua_State*L,int idx){
+static lua_Integer lua_tointeger_hack(lua_State*L,int idx){
 TValue n;
 const TValue*o=index2adr(L,idx);
 if(tonumber(o,&n)){
@@ -5473,11 +5473,11 @@ return res;
 else
 return 0;
 }
-static int lua_toboolean(lua_State*L,int idx){
+static int lua_toboolean_hack(lua_State*L,int idx){
 const TValue*o=index2adr(L,idx);
 return!l_isfalse(o);
 }
-static const char*lua_tolstring(lua_State*L,int idx,size_t*len){
+static const char*lua_tolstring_hack(lua_State*L,int idx,size_t*len){
 StkId o=index2adr(L,idx);
 if(!ttisstring(o)){
 if(!luaV_tostring(L,o)){
@@ -5490,7 +5490,7 @@ o=index2adr(L,idx);
 if(len!=NULL)*len=tsvalue(o)->len;
 return svalue(o);
 }
-static size_t lua_objlen(lua_State*L,int idx){
+static size_t lua_objlen_hack(lua_State*L,int idx){
 StkId o=index2adr(L,idx);
 switch(ttype(o)){
 case 4:return tsvalue(o)->len;
@@ -5504,11 +5504,11 @@ return l;
 default:return 0;
 }
 }
-static lua_CFunction lua_tocfunction(lua_State*L,int idx){
+static lua_CFunction lua_tocfunction_hack(lua_State*L,int idx){
 StkId o=index2adr(L,idx);
 return(!iscfunction(o))?NULL:clvalue(o)->c.f;
 }
-static void*lua_touserdata(lua_State*L,int idx){
+static void*lua_touserdata_hack(lua_State*L,int idx){
 StkId o=index2adr(L,idx);
 switch(ttype(o)){
 case 7:return(rawuvalue(o)+1);
@@ -5516,37 +5516,37 @@ case 2:return pvalue(o);
 default:return NULL;
 }
 }
-static void lua_pushnil(lua_State*L){
+static void lua_pushnil_hack(lua_State*L){
 setnilvalue(L->top);
 api_incr_top(L);
 }
-static void lua_pushnumber(lua_State*L,lua_Number n){
+static void lua_pushnumber_hack(lua_State*L,lua_Number n){
 setnvalue(L->top,n);
 api_incr_top(L);
 }
-static void lua_pushinteger(lua_State*L,lua_Integer n){
+static void lua_pushinteger_hack(lua_State*L,lua_Integer n){
 setnvalue(L->top,cast_num(n));
 api_incr_top(L);
 }
-static void lua_pushlstring(lua_State*L,const char*s,size_t len){
+static void lua_pushlstring_hack(lua_State*L,const char*s,size_t len){
 luaC_checkGC(L);
 setsvalue(L,L->top,luaS_newlstr(L,s,len));
 api_incr_top(L);
 }
-static void lua_pushstring(lua_State*L,const char*s){
+static void lua_pushstring_hack(lua_State*L,const char*s){
 if(s==NULL)
-lua_pushnil(L);
+lua_pushnil_hack(L);
 else
-lua_pushlstring(L,s,strlen(s));
+lua_pushlstring_hack(L,s,strlen(s));
 }
-static const char*lua_pushvfstring(lua_State*L,const char*fmt,
+static const char*lua_pushvfstring_hack(lua_State*L,const char*fmt,
 va_list argp){
 const char*ret;
 luaC_checkGC(L);
 ret=luaO_pushvfstring(L,fmt,argp);
 return ret;
 }
-static const char*lua_pushfstring(lua_State*L,const char*fmt,...){
+static const char*lua_pushfstring_hack(lua_State*L,const char*fmt,...){
 const char*ret;
 va_list argp;
 luaC_checkGC(L);
@@ -5555,7 +5555,7 @@ ret=luaO_pushvfstring(L,fmt,argp);
 va_end(argp);
 return ret;
 }
-static void lua_pushcclosure(lua_State*L,lua_CFunction fn,int n){
+static void lua_pushcclosure_hack(lua_State*L,lua_CFunction fn,int n){
 Closure*cl;
 luaC_checkGC(L);
 api_checknelems(L,n);
@@ -5567,22 +5567,22 @@ setobj(L,&cl->c.upvalue[n],L->top+n);
 setclvalue(L,L->top,cl);
 api_incr_top(L);
 }
-static void lua_pushboolean(lua_State*L,int b){
+static void lua_pushboolean_hack(lua_State*L,int b){
 setbvalue(L->top,(b!=0));
 api_incr_top(L);
 }
-static int lua_pushthread(lua_State*L){
+static int lua_pushthread_hack(lua_State*L){
 setthvalue(L,L->top,L);
 api_incr_top(L);
 return(G(L)->mainthread==L);
 }
-static void lua_gettable(lua_State*L,int idx){
+static void lua_gettable_hack(lua_State*L,int idx){
 StkId t;
 t=index2adr(L,idx);
 api_checkvalidindex(L,t);
 luaV_gettable(L,t,L->top-1,L->top-1);
 }
-static void lua_getfield(lua_State*L,int idx,const char*k){
+static void lua_getfield_hack(lua_State*L,int idx,const char*k){
 StkId t;
 TValue key;
 t=index2adr(L,idx);
@@ -5591,25 +5591,25 @@ setsvalue(L,&key,luaS_new(L,k));
 luaV_gettable(L,t,&key,L->top);
 api_incr_top(L);
 }
-static void lua_rawget(lua_State*L,int idx){
+static void lua_rawget_hack(lua_State*L,int idx){
 StkId t;
 t=index2adr(L,idx);
 luai_apicheck(L,ttistable(t));
 setobj(L,L->top-1,luaH_get(hvalue(t),L->top-1));
 }
-static void lua_rawgeti(lua_State*L,int idx,int n){
+static void lua_rawgeti_hack(lua_State*L,int idx,int n){
 StkId o;
 o=index2adr(L,idx);
 luai_apicheck(L,ttistable(o));
 setobj(L,L->top,luaH_getnum(hvalue(o),n));
 api_incr_top(L);
 }
-static void lua_createtable(lua_State*L,int narray,int nrec){
+static void lua_createtable_hack(lua_State*L,int narray,int nrec){
 luaC_checkGC(L);
 sethvalue(L,L->top,luaH_new(L,narray,nrec));
 api_incr_top(L);
 }
-static int lua_getmetatable(lua_State*L,int objindex){
+static int lua_getmetatable_hack(lua_State*L,int objindex){
 const TValue*obj;
 Table*mt=NULL;
 int res;
@@ -5634,7 +5634,7 @@ res=1;
 }
 return res;
 }
-static void lua_getfenv(lua_State*L,int idx){
+static void lua_getfenv_hack(lua_State*L,int idx){
 StkId o;
 o=index2adr(L,idx);
 api_checkvalidindex(L,o);
@@ -5654,7 +5654,7 @@ break;
 }
 api_incr_top(L);
 }
-static void lua_settable(lua_State*L,int idx){
+static void lua_settable_hack(lua_State*L,int idx){
 StkId t;
 api_checknelems(L,2);
 t=index2adr(L,idx);
@@ -5662,7 +5662,7 @@ api_checkvalidindex(L,t);
 luaV_settable(L,t,L->top-2,L->top-1);
 L->top-=2;
 }
-static void lua_setfield(lua_State*L,int idx,const char*k){
+static void lua_setfield_hack(lua_State*L,int idx,const char*k){
 StkId t;
 TValue key;
 api_checknelems(L,1);
@@ -5672,7 +5672,7 @@ setsvalue(L,&key,luaS_new(L,k));
 luaV_settable(L,t,&key,L->top-1);
 L->top--;
 }
-static void lua_rawset(lua_State*L,int idx){
+static void lua_rawset_hack(lua_State*L,int idx){
 StkId t;
 api_checknelems(L,2);
 t=index2adr(L,idx);
@@ -5681,7 +5681,7 @@ setobj(L,luaH_set(L,hvalue(t),L->top-2),L->top-1);
 luaC_barriert(L,hvalue(t),L->top-1);
 L->top-=2;
 }
-static void lua_rawseti(lua_State*L,int idx,int n){
+static void lua_rawseti_hack(lua_State*L,int idx,int n){
 StkId o;
 api_checknelems(L,1);
 o=index2adr(L,idx);
@@ -5690,7 +5690,7 @@ setobj(L,luaH_setnum(L,hvalue(o),n),L->top-1);
 luaC_barriert(L,hvalue(o),L->top-1);
 L->top--;
 }
-static int lua_setmetatable(lua_State*L,int objindex){
+static int lua_setmetatable_hack(lua_State*L,int objindex){
 TValue*obj;
 Table*mt;
 api_checknelems(L,1);
@@ -5723,7 +5723,7 @@ break;
 L->top--;
 return 1;
 }
-static int lua_setfenv(lua_State*L,int idx){
+static int lua_setfenv_hack(lua_State*L,int idx){
 StkId o;
 int res=1;
 api_checknelems(L,1);
@@ -5750,7 +5750,7 @@ return res;
 }
 #define adjustresults(L,nres){if(nres==(-1)&&L->top>=L->ci->top)L->ci->top=L->top;}
 #define checkresults(L,na,nr)luai_apicheck(L,(nr)==(-1)||(L->ci->top-L->top>=(nr)-(na)))
-static void lua_call(lua_State*L,int nargs,int nresults){
+static void lua_call_hack(lua_State*L,int nargs,int nresults){
 StkId func;
 api_checknelems(L,nargs+1);
 checkresults(L,nargs,nresults);
@@ -5766,7 +5766,7 @@ static void f_call(lua_State*L,void*ud){
 struct CallS*c=cast(struct CallS*,ud);
 luaD_call(L,c->func,c->nresults);
 }
-static int lua_pcall(lua_State*L,int nargs,int nresults,int errfunc){
+static int lua_pcall_hack(lua_State*L,int nargs,int nresults,int errfunc){
 struct CallS c;
 int status;
 ptrdiff_t func;
@@ -5785,7 +5785,7 @@ status=luaD_pcall(L,f_call,&c,savestack(L,c.func),func);
 adjustresults(L,nresults);
 return status;
 }
-static int lua_load(lua_State*L,lua_Reader reader,void*data,
+static int lua_load_hack(lua_State*L,lua_Reader reader,void*data,
 const char*chunkname){
 ZIO z;
 int status;
@@ -5794,12 +5794,12 @@ luaZ_init(L,&z,reader,data);
 status=luaD_protectedparser(L,&z,chunkname);
 return status;
 }
-static int lua_error(lua_State*L){
+static int lua_error_hack(lua_State*L){
 api_checknelems(L,1);
 luaG_errormsg(L);
 return 0;
 }
-static int lua_next(lua_State*L,int idx){
+static int lua_next_hack(lua_State*L,int idx){
 StkId t;
 int more;
 t=index2adr(L,idx);
@@ -5812,7 +5812,7 @@ else
 L->top-=1;
 return more;
 }
-static void lua_concat(lua_State*L,int n){
+static void lua_concat_hack(lua_State*L,int n){
 api_checknelems(L,n);
 if(n>=2){
 luaC_checkGC(L);
@@ -5824,7 +5824,7 @@ setsvalue(L,L->top,luaS_newlstr(L,"",0));
 api_incr_top(L);
 }
 }
-static void*lua_newuserdata(lua_State*L,size_t size){
+static void*lua_newuserdata_hack(lua_State*L,size_t size){
 Udata*u;
 luaC_checkGC(L);
 u=luaS_newudata(L,size,getcurrenv(L));
@@ -5832,7 +5832,7 @@ setuvalue(L,L->top,u);
 api_incr_top(L);
 return u+1;
 }
-#define luaL_getn(L,i)((int)lua_objlen(L,i))
+#define luaL_getn(L,i)((int)lua_objlen_hack(L,i))
 #define luaL_setn(L,i,j)((void)0)
 typedef struct luaL_Reg{
 const char*name;
@@ -5840,24 +5840,24 @@ lua_CFunction func;
 }luaL_Reg;
 static void luaI_openlib(lua_State*L,const char*libname,
 const luaL_Reg*l,int nup);
-static int luaL_argerror(lua_State*L,int numarg,const char*extramsg);
-static const char* luaL_checklstring(lua_State*L,int numArg,
+static int luaL_argerror_hack(lua_State*L,int numarg,const char*extramsg);
+static const char* luaL_checklstring_hack(lua_State*L,int numArg,
 size_t*l);
-static const char* luaL_optlstring(lua_State*L,int numArg,
+static const char* luaL_optlstring_hack(lua_State*L,int numArg,
 const char*def,size_t*l);
-static lua_Integer luaL_checkinteger(lua_State*L,int numArg);
-static lua_Integer luaL_optinteger(lua_State*L,int nArg,
+static lua_Integer luaL_checkinteger_hack(lua_State*L,int numArg);
+static lua_Integer luaL_optinteger_hack(lua_State*L,int nArg,
 lua_Integer def);
-static int luaL_error(lua_State*L,const char*fmt,...);
-static const char* luaL_findtable(lua_State*L,int idx,
+static int luaL_error_hack(lua_State*L,const char*fmt,...);
+static const char* luaL_findtable_hack(lua_State*L,int idx,
 const char*fname,int szhint);
-#define luaL_argcheck(L,cond,numarg,extramsg)((void)((cond)||luaL_argerror(L,(numarg),(extramsg))))
-#define luaL_checkstring(L,n)(luaL_checklstring(L,(n),NULL))
-#define luaL_optstring(L,n,d)(luaL_optlstring(L,(n),(d),NULL))
-#define luaL_checkint(L,n)((int)luaL_checkinteger(L,(n)))
-#define luaL_optint(L,n,d)((int)luaL_optinteger(L,(n),(d)))
-#define luaL_typename(L,i)lua_typename(L,lua_type(L,(i)))
-#define luaL_getmetatable(L,n)(lua_getfield(L,(-10000),(n)))
+#define luaL_argcheck(L,cond,numarg,extramsg)((void)((cond)||luaL_argerror_hack(L,(numarg),(extramsg))))
+#define luaL_checkstring(L,n)(luaL_checklstring_hack(L,(n),NULL))
+#define luaL_optstring(L,n,d)(luaL_optlstring_hack(L,(n),(d),NULL))
+#define luaL_checkint(L,n)((int)luaL_checkinteger_hack(L,(n)))
+#define luaL_optint(L,n,d)((int)luaL_optinteger_hack(L,(n),(d)))
+#define luaL_typename(L,i)lua_typename_hack(L,lua_type_hack(L,(i)))
+#define luaL_getmetatable(L,n)(lua_getfield_hack(L,(-10000),(n)))
 #define luaL_opt(L,f,n,d)(lua_isnoneornil(L,(n))?(d):f(L,(n)))
 typedef struct luaL_Buffer{
 char*p;
@@ -5865,134 +5865,134 @@ int lvl;
 lua_State*L;
 char buffer[BUFSIZ];
 }luaL_Buffer;
-#define luaL_addchar(B,c)((void)((B)->p<((B)->buffer+BUFSIZ)||luaL_prepbuffer(B)),(*(B)->p++=(char)(c)))
+#define luaL_addchar(B,c)((void)((B)->p<((B)->buffer+BUFSIZ)||luaL_prepbuffer_hack(B)),(*(B)->p++=(char)(c)))
 #define luaL_addsize(B,n)((B)->p+=(n))
-static char* luaL_prepbuffer(luaL_Buffer*B);
-static int luaL_argerror(lua_State*L,int narg,const char*extramsg){
+static char* luaL_prepbuffer_hack(luaL_Buffer*B);
+static int luaL_argerror_hack(lua_State*L,int narg,const char*extramsg){
 lua_Debug ar;
-if(!lua_getstack(L,0,&ar))
-return luaL_error(L,"bad argument #%d (%s)",narg,extramsg);
-lua_getinfo(L,"n",&ar);
+if(!lua_getstack_hack(L,0,&ar))
+return luaL_error_hack(L,"bad argument #%d (%s)",narg,extramsg);
+lua_getinfo_hack(L,"n",&ar);
 if(strcmp(ar.namewhat,"method")==0){
 narg--;
 if(narg==0)
-return luaL_error(L,"calling "LUA_QL("%s")" on bad self (%s)",
+return luaL_error_hack(L,"calling "LUA_QL("%s")" on bad self (%s)",
 ar.name,extramsg);
 }
 if(ar.name==NULL)
 ar.name="?";
-return luaL_error(L,"bad argument #%d to "LUA_QL("%s")" (%s)",
+return luaL_error_hack(L,"bad argument #%d to "LUA_QL("%s")" (%s)",
 narg,ar.name,extramsg);
 }
-static int luaL_typerror(lua_State*L,int narg,const char*tname){
-const char*msg=lua_pushfstring(L,"%s expected, got %s",
+static int luaL_typerror_hack(lua_State*L,int narg,const char*tname){
+const char*msg=lua_pushfstring_hack(L,"%s expected, got %s",
 tname,luaL_typename(L,narg));
-return luaL_argerror(L,narg,msg);
+return luaL_argerror_hack(L,narg,msg);
 }
 static void tag_error(lua_State*L,int narg,int tag){
-luaL_typerror(L,narg,lua_typename(L,tag));
+luaL_typerror_hack(L,narg,lua_typename_hack(L,tag));
 }
-static void luaL_where(lua_State*L,int level){
+static void luaL_where_hack(lua_State*L,int level){
 lua_Debug ar;
-if(lua_getstack(L,level,&ar)){
-lua_getinfo(L,"Sl",&ar);
+if(lua_getstack_hack(L,level,&ar)){
+lua_getinfo_hack(L,"Sl",&ar);
 if(ar.currentline>0){
-lua_pushfstring(L,"%s:%d: ",ar.short_src,ar.currentline);
+lua_pushfstring_hack(L,"%s:%d: ",ar.short_src,ar.currentline);
 return;
 }
 }
 lua_pushliteral(L,"");
 }
-static int luaL_error(lua_State*L,const char*fmt,...){
+static int luaL_error_hack(lua_State*L,const char*fmt,...){
 va_list argp;
 va_start(argp,fmt);
-luaL_where(L,1);
-lua_pushvfstring(L,fmt,argp);
+luaL_where_hack(L,1);
+lua_pushvfstring_hack(L,fmt,argp);
 va_end(argp);
-lua_concat(L,2);
-return lua_error(L);
+lua_concat_hack(L,2);
+return lua_error_hack(L);
 }
-static int luaL_newmetatable(lua_State*L,const char*tname){
-lua_getfield(L,(-10000),tname);
+static int luaL_newmetatable_hack(lua_State*L,const char*tname){
+lua_getfield_hack(L,(-10000),tname);
 if(!lua_isnil(L,-1))
 return 0;
 lua_pop(L,1);
 lua_newtable(L);
-lua_pushvalue(L,-1);
-lua_setfield(L,(-10000),tname);
+lua_pushvalue_hack(L,-1);
+lua_setfield_hack(L,(-10000),tname);
 return 1;
 }
-static void*luaL_checkudata(lua_State*L,int ud,const char*tname){
-void*p=lua_touserdata(L,ud);
+static void*luaL_checkudata_hack(lua_State*L,int ud,const char*tname){
+void*p=lua_touserdata_hack(L,ud);
 if(p!=NULL){
-if(lua_getmetatable(L,ud)){
-lua_getfield(L,(-10000),tname);
-if(lua_rawequal(L,-1,-2)){
+if(lua_getmetatable_hack(L,ud)){
+lua_getfield_hack(L,(-10000),tname);
+if(lua_rawequal_hack(L,-1,-2)){
 lua_pop(L,2);
 return p;
 }
 }
 }
-luaL_typerror(L,ud,tname);
+luaL_typerror_hack(L,ud,tname);
 return NULL;
 }
-static void luaL_checkstack(lua_State*L,int space,const char*mes){
-if(!lua_checkstack(L,space))
-luaL_error(L,"stack overflow (%s)",mes);
+static void luaL_checkstack_hack(lua_State*L,int space,const char*mes){
+if(!lua_checkstack_hack(L,space))
+luaL_error_hack(L,"stack overflow (%s)",mes);
 }
-static void luaL_checktype(lua_State*L,int narg,int t){
-if(lua_type(L,narg)!=t)
+static void luaL_checktype_hack(lua_State*L,int narg,int t){
+if(lua_type_hack(L,narg)!=t)
 tag_error(L,narg,t);
 }
-static void luaL_checkany(lua_State*L,int narg){
-if(lua_type(L,narg)==(-1))
-luaL_argerror(L,narg,"value expected");
+static void luaL_checkany_hack(lua_State*L,int narg){
+if(lua_type_hack(L,narg)==(-1))
+luaL_argerror_hack(L,narg,"value expected");
 }
-static const char*luaL_checklstring(lua_State*L,int narg,size_t*len){
-const char*s=lua_tolstring(L,narg,len);
+static const char*luaL_checklstring_hack(lua_State*L,int narg,size_t*len){
+const char*s=lua_tolstring_hack(L,narg,len);
 if(!s)tag_error(L,narg,4);
 return s;
 }
-static const char*luaL_optlstring(lua_State*L,int narg,
+static const char*luaL_optlstring_hack(lua_State*L,int narg,
 const char*def,size_t*len){
 if(lua_isnoneornil(L,narg)){
 if(len)
 *len=(def?strlen(def):0);
 return def;
 }
-else return luaL_checklstring(L,narg,len);
+else return luaL_checklstring_hack(L,narg,len);
 }
-static lua_Number luaL_checknumber(lua_State*L,int narg){
-lua_Number d=lua_tonumber(L,narg);
-if(d==0&&!lua_isnumber(L,narg))
+static lua_Number luaL_checknumber_hack(lua_State*L,int narg){
+lua_Number d=lua_tonumber_hack(L,narg);
+if(d==0&&!lua_isnumber_hack(L,narg))
 tag_error(L,narg,3);
 return d;
 }
-static lua_Integer luaL_checkinteger(lua_State*L,int narg){
-lua_Integer d=lua_tointeger(L,narg);
-if(d==0&&!lua_isnumber(L,narg))
+static lua_Integer luaL_checkinteger_hack(lua_State*L,int narg){
+lua_Integer d=lua_tointeger_hack(L,narg);
+if(d==0&&!lua_isnumber_hack(L,narg))
 tag_error(L,narg,3);
 return d;
 }
-static lua_Integer luaL_optinteger(lua_State*L,int narg,
+static lua_Integer luaL_optinteger_hack(lua_State*L,int narg,
 lua_Integer def){
-return luaL_opt(L,luaL_checkinteger,narg,def);
+return luaL_opt(L,luaL_checkinteger_hack,narg,def);
 }
-static int luaL_getmetafield(lua_State*L,int obj,const char*event){
-if(!lua_getmetatable(L,obj))
+static int luaL_getmetafield_hack(lua_State*L,int obj,const char*event){
+if(!lua_getmetatable_hack(L,obj))
 return 0;
-lua_pushstring(L,event);
-lua_rawget(L,-2);
+lua_pushstring_hack(L,event);
+lua_rawget_hack(L,-2);
 if(lua_isnil(L,-1)){
 lua_pop(L,2);
 return 0;
 }
 else{
-lua_remove(L,-2);
+lua_remove_hack(L,-2);
 return 1;
 }
 }
-static void luaL_register(lua_State*L,const char*libname,
+static void luaL_register_hack(lua_State*L,const char*libname,
 const luaL_Reg*l){
 luaI_openlib(L,libname,l,0);
 }
@@ -6005,48 +6005,48 @@ static void luaI_openlib(lua_State*L,const char*libname,
 const luaL_Reg*l,int nup){
 if(libname){
 int size=libsize(l);
-luaL_findtable(L,(-10000),"_LOADED",1);
-lua_getfield(L,-1,libname);
+luaL_findtable_hack(L,(-10000),"_LOADED",1);
+lua_getfield_hack(L,-1,libname);
 if(!lua_istable(L,-1)){
 lua_pop(L,1);
-if(luaL_findtable(L,(-10002),libname,size)!=NULL)
-luaL_error(L,"name conflict for module "LUA_QL("%s"),libname);
-lua_pushvalue(L,-1);
-lua_setfield(L,-3,libname);
+if(luaL_findtable_hack(L,(-10002),libname,size)!=NULL)
+luaL_error_hack(L,"name conflict for module "LUA_QL("%s"),libname);
+lua_pushvalue_hack(L,-1);
+lua_setfield_hack(L,-3,libname);
 }
-lua_remove(L,-2);
-lua_insert(L,-(nup+1));
+lua_remove_hack(L,-2);
+lua_insert_hack(L,-(nup+1));
 }
 for(;l->name;l++){
 int i;
 for(i=0;i<nup;i++)
-lua_pushvalue(L,-nup);
-lua_pushcclosure(L,l->func,nup);
-lua_setfield(L,-(nup+2),l->name);
+lua_pushvalue_hack(L,-nup);
+lua_pushcclosure_hack(L,l->func,nup);
+lua_setfield_hack(L,-(nup+2),l->name);
 }
 lua_pop(L,nup);
 }
-static const char*luaL_findtable(lua_State*L,int idx,
+static const char*luaL_findtable_hack(lua_State*L,int idx,
 const char*fname,int szhint){
 const char*e;
-lua_pushvalue(L,idx);
+lua_pushvalue_hack(L,idx);
 do{
 e=strchr(fname,'.');
 if(e==NULL)e=fname+strlen(fname);
-lua_pushlstring(L,fname,e-fname);
-lua_rawget(L,-2);
+lua_pushlstring_hack(L,fname,e-fname);
+lua_rawget_hack(L,-2);
 if(lua_isnil(L,-1)){
 lua_pop(L,1);
-lua_createtable(L,0,(*e=='.'?1:szhint));
-lua_pushlstring(L,fname,e-fname);
-lua_pushvalue(L,-2);
-lua_settable(L,-4);
+lua_createtable_hack(L,0,(*e=='.'?1:szhint));
+lua_pushlstring_hack(L,fname,e-fname);
+lua_pushvalue_hack(L,-2);
+lua_settable_hack(L,-4);
 }
 else if(!lua_istable(L,-1)){
 lua_pop(L,2);
 return fname;
 }
-lua_remove(L,-2);
+lua_remove_hack(L,-2);
 fname=e+1;
 }while(*e=='.');
 return NULL;
@@ -6057,7 +6057,7 @@ static int emptybuffer(luaL_Buffer*B){
 size_t l=bufflen(B);
 if(l==0)return 0;
 else{
-lua_pushlstring(B->L,B->buffer,l);
+lua_pushlstring_hack(B->L,B->buffer,l);
 B->p=B->buffer;
 B->lvl++;
 return 1;
@@ -6076,28 +6076,28 @@ toget++;
 }
 else break;
 }while(toget<B->lvl);
-lua_concat(L,toget);
+lua_concat_hack(L,toget);
 B->lvl=B->lvl-toget+1;
 }
 }
-static char*luaL_prepbuffer(luaL_Buffer*B){
+static char*luaL_prepbuffer_hack(luaL_Buffer*B){
 if(emptybuffer(B))
 adjuststack(B);
 return B->buffer;
 }
-static void luaL_addlstring(luaL_Buffer*B,const char*s,size_t l){
+static void luaL_addlstring_hack(luaL_Buffer*B,const char*s,size_t l){
 while(l--)
 luaL_addchar(B,*s++);
 }
-static void luaL_pushresult(luaL_Buffer*B){
+static void luaL_pushresult_hack(luaL_Buffer*B){
 emptybuffer(B);
-lua_concat(B->L,B->lvl);
+lua_concat_hack(B->L,B->lvl);
 B->lvl=1;
 }
-static void luaL_addvalue(luaL_Buffer*B){
+static void luaL_addvalue_hack(luaL_Buffer*B){
 lua_State*L=B->L;
 size_t vl;
-const char*s=lua_tolstring(L,-1,&vl);
+const char*s=lua_tolstring_hack(L,-1,&vl);
 if(vl<=bufffree(B)){
 memcpy(B->p,s,vl);
 B->p+=vl;
@@ -6105,12 +6105,12 @@ lua_pop(L,1);
 }
 else{
 if(emptybuffer(B))
-lua_insert(L,-2);
+lua_insert_hack(L,-2);
 B->lvl++;
 adjuststack(B);
 }
 }
-static void luaL_buffinit(lua_State*L,luaL_Buffer*B){
+static void luaL_buffinit_hack(lua_State*L,luaL_Buffer*B){
 B->L=L;
 B->p=B->buffer;
 B->lvl=0;
@@ -6135,22 +6135,22 @@ return(*size>0)?lf->buff:NULL;
 static int errfile(lua_State*L,const char*what,int fnameindex){
 const char*serr=strerror(errno);
 const char*filename=lua_tostring(L,fnameindex)+1;
-lua_pushfstring(L,"cannot %s %s: %s",what,filename,serr);
-lua_remove(L,fnameindex);
+lua_pushfstring_hack(L,"cannot %s %s: %s",what,filename,serr);
+lua_remove_hack(L,fnameindex);
 return(5+1);
 }
-static int luaL_loadfile(lua_State*L,const char*filename){
+static int luaL_loadfile_hack(lua_State*L,const char*filename){
 LoadF lf;
 int status,readstatus;
 int c;
-int fnameindex=lua_gettop(L)+1;
+int fnameindex=lua_gettop_hack(L)+1;
 lf.extraline=0;
 if(filename==NULL){
 lua_pushliteral(L,"=stdin");
 lf.f=stdin;
 }
 else{
-lua_pushfstring(L,"@%s",filename);
+lua_pushfstring_hack(L,"@%s",filename);
 lf.f=fopen(filename,"r");
 if(lf.f==NULL)return errfile(L,"open",fnameindex);
 }
@@ -6167,14 +6167,14 @@ while((c=getc(lf.f))!=EOF&&c!="\033Lua"[0]);
 lf.extraline=0;
 }
 ungetc(c,lf.f);
-status=lua_load(L,getF,&lf,lua_tostring(L,-1));
+status=lua_load_hack(L,getF,&lf,lua_tostring(L,-1));
 readstatus=ferror(lf.f);
 if(filename)fclose(lf.f);
 if(readstatus){
-lua_settop(L,fnameindex);
+lua_settop_hack(L,fnameindex);
 return errfile(L,"read",fnameindex);
 }
-lua_remove(L,fnameindex);
+lua_remove_hack(L,fnameindex);
 return status;
 }
 typedef struct LoadS{
@@ -6189,12 +6189,12 @@ if(ls->size==0)return NULL;
 ls->size=0;
 return ls->s;
 }
-static int luaL_loadbuffer(lua_State*L,const char*buff,size_t size,
+static int luaL_loadbuffer_hack(lua_State*L,const char*buff,size_t size,
 const char*name){
 LoadS ls;
 ls.s=buff;
 ls.size=size;
-return lua_load(L,getS,&ls,name);
+return lua_load_hack(L,getS,&ls,name);
 }
 static void*l_alloc(void*ud,void*ptr,size_t osize,size_t nsize){
 (void)ud;
@@ -6212,17 +6212,17 @@ fprintf(stderr,"PANIC: unprotected error in call to Lua API (%s)\n",
 lua_tostring(L,-1));
 return 0;
 }
-static lua_State*luaL_newstate(void){
-lua_State*L=lua_newstate(l_alloc,NULL);
-if(L)lua_atpanic(L,&panic);
+static lua_State*luaL_newstate_hack(void){
+lua_State*L=lua_newstate_hack(l_alloc,NULL);
+if(L)lua_atpanic_hack(L,&panic);
 return L;
 }
 static int luaB_tonumber(lua_State*L){
 int base=luaL_optint(L,2,10);
 if(base==10){
-luaL_checkany(L,1);
-if(lua_isnumber(L,1)){
-lua_pushnumber(L,lua_tonumber(L,1));
+luaL_checkany_hack(L,1);
+if(lua_isnumber_hack(L,1)){
+lua_pushnumber_hack(L,lua_tonumber_hack(L,1));
 return 1;
 }
 }
@@ -6235,177 +6235,177 @@ n=strtoul(s1,&s2,base);
 if(s1!=s2){
 while(isspace((unsigned char)(*s2)))s2++;
 if(*s2=='\0'){
-lua_pushnumber(L,(lua_Number)n);
+lua_pushnumber_hack(L,(lua_Number)n);
 return 1;
 }
 }
 }
-lua_pushnil(L);
+lua_pushnil_hack(L);
 return 1;
 }
 static int luaB_error(lua_State*L){
 int level=luaL_optint(L,2,1);
-lua_settop(L,1);
-if(lua_isstring(L,1)&&level>0){
-luaL_where(L,level);
-lua_pushvalue(L,1);
-lua_concat(L,2);
+lua_settop_hack(L,1);
+if(lua_isstring_hack(L,1)&&level>0){
+luaL_where_hack(L,level);
+lua_pushvalue_hack(L,1);
+lua_concat_hack(L,2);
 }
-return lua_error(L);
+return lua_error_hack(L);
 }
 static int luaB_setmetatable(lua_State*L){
-int t=lua_type(L,2);
-luaL_checktype(L,1,5);
+int t=lua_type_hack(L,2);
+luaL_checktype_hack(L,1,5);
 luaL_argcheck(L,t==0||t==5,2,
 "nil or table expected");
-if(luaL_getmetafield(L,1,"__metatable"))
-luaL_error(L,"cannot change a protected metatable");
-lua_settop(L,2);
-lua_setmetatable(L,1);
+if(luaL_getmetafield_hack(L,1,"__metatable"))
+luaL_error_hack(L,"cannot change a protected metatable");
+lua_settop_hack(L,2);
+lua_setmetatable_hack(L,1);
 return 1;
 }
 static void getfunc(lua_State*L,int opt){
-if(lua_isfunction(L,1))lua_pushvalue(L,1);
+if(lua_isfunction(L,1))lua_pushvalue_hack(L,1);
 else{
 lua_Debug ar;
 int level=opt?luaL_optint(L,1,1):luaL_checkint(L,1);
 luaL_argcheck(L,level>=0,1,"level must be non-negative");
-if(lua_getstack(L,level,&ar)==0)
-luaL_argerror(L,1,"invalid level");
-lua_getinfo(L,"f",&ar);
+if(lua_getstack_hack(L,level,&ar)==0)
+luaL_argerror_hack(L,1,"invalid level");
+lua_getinfo_hack(L,"f",&ar);
 if(lua_isnil(L,-1))
-luaL_error(L,"no function environment for tail call at level %d",
+luaL_error_hack(L,"no function environment for tail call at level %d",
 level);
 }
 }
 static int luaB_setfenv(lua_State*L){
-luaL_checktype(L,2,5);
+luaL_checktype_hack(L,2,5);
 getfunc(L,0);
-lua_pushvalue(L,2);
-if(lua_isnumber(L,1)&&lua_tonumber(L,1)==0){
-lua_pushthread(L);
-lua_insert(L,-2);
-lua_setfenv(L,-2);
+lua_pushvalue_hack(L,2);
+if(lua_isnumber_hack(L,1)&&lua_tonumber_hack(L,1)==0){
+lua_pushthread_hack(L);
+lua_insert_hack(L,-2);
+lua_setfenv_hack(L,-2);
 return 0;
 }
-else if(lua_iscfunction(L,-2)||lua_setfenv(L,-2)==0)
-luaL_error(L,
+else if(lua_iscfunction_hack(L,-2)||lua_setfenv_hack(L,-2)==0)
+luaL_error_hack(L,
 LUA_QL("setfenv")" cannot change environment of given object");
 return 1;
 }
 static int luaB_rawget(lua_State*L){
-luaL_checktype(L,1,5);
-luaL_checkany(L,2);
-lua_settop(L,2);
-lua_rawget(L,1);
+luaL_checktype_hack(L,1,5);
+luaL_checkany_hack(L,2);
+lua_settop_hack(L,2);
+lua_rawget_hack(L,1);
 return 1;
 }
 static int luaB_type(lua_State*L){
-luaL_checkany(L,1);
-lua_pushstring(L,luaL_typename(L,1));
+luaL_checkany_hack(L,1);
+lua_pushstring_hack(L,luaL_typename(L,1));
 return 1;
 }
 static int luaB_next(lua_State*L){
-luaL_checktype(L,1,5);
-lua_settop(L,2);
-if(lua_next(L,1))
+luaL_checktype_hack(L,1,5);
+lua_settop_hack(L,2);
+if(lua_next_hack(L,1))
 return 2;
 else{
-lua_pushnil(L);
+lua_pushnil_hack(L);
 return 1;
 }
 }
 static int luaB_pairs(lua_State*L){
-luaL_checktype(L,1,5);
-lua_pushvalue(L,lua_upvalueindex(1));
-lua_pushvalue(L,1);
-lua_pushnil(L);
+luaL_checktype_hack(L,1,5);
+lua_pushvalue_hack(L,lua_upvalueindex(1));
+lua_pushvalue_hack(L,1);
+lua_pushnil_hack(L);
 return 3;
 }
 static int ipairsaux(lua_State*L){
 int i=luaL_checkint(L,2);
-luaL_checktype(L,1,5);
+luaL_checktype_hack(L,1,5);
 i++;
-lua_pushinteger(L,i);
-lua_rawgeti(L,1,i);
+lua_pushinteger_hack(L,i);
+lua_rawgeti_hack(L,1,i);
 return(lua_isnil(L,-1))?0:2;
 }
 static int luaB_ipairs(lua_State*L){
-luaL_checktype(L,1,5);
-lua_pushvalue(L,lua_upvalueindex(1));
-lua_pushvalue(L,1);
-lua_pushinteger(L,0);
+luaL_checktype_hack(L,1,5);
+lua_pushvalue_hack(L,lua_upvalueindex(1));
+lua_pushvalue_hack(L,1);
+lua_pushinteger_hack(L,0);
 return 3;
 }
 static int load_aux(lua_State*L,int status){
 if(status==0)
 return 1;
 else{
-lua_pushnil(L);
-lua_insert(L,-2);
+lua_pushnil_hack(L);
+lua_insert_hack(L,-2);
 return 2;
 }
 }
 static int luaB_loadstring(lua_State*L){
 size_t l;
-const char*s=luaL_checklstring(L,1,&l);
+const char*s=luaL_checklstring_hack(L,1,&l);
 const char*chunkname=luaL_optstring(L,2,s);
-return load_aux(L,luaL_loadbuffer(L,s,l,chunkname));
+return load_aux(L,luaL_loadbuffer_hack(L,s,l,chunkname));
 }
 static int luaB_loadfile(lua_State*L){
 const char*fname=luaL_optstring(L,1,NULL);
-return load_aux(L,luaL_loadfile(L,fname));
+return load_aux(L,luaL_loadfile_hack(L,fname));
 }
 static int luaB_assert(lua_State*L){
-luaL_checkany(L,1);
-if(!lua_toboolean(L,1))
-return luaL_error(L,"%s",luaL_optstring(L,2,"assertion failed!"));
-return lua_gettop(L);
+luaL_checkany_hack(L,1);
+if(!lua_toboolean_hack(L,1))
+return luaL_error_hack(L,"%s",luaL_optstring(L,2,"assertion failed!"));
+return lua_gettop_hack(L);
 }
 static int luaB_unpack(lua_State*L){
 int i,e,n;
-luaL_checktype(L,1,5);
+luaL_checktype_hack(L,1,5);
 i=luaL_optint(L,2,1);
 e=luaL_opt(L,luaL_checkint,3,luaL_getn(L,1));
 if(i>e)return 0;
 n=e-i+1;
-if(n<=0||!lua_checkstack(L,n))
-return luaL_error(L,"too many results to unpack");
-lua_rawgeti(L,1,i);
+if(n<=0||!lua_checkstack_hack(L,n))
+return luaL_error_hack(L,"too many results to unpack");
+lua_rawgeti_hack(L,1,i);
 while(i++<e)
-lua_rawgeti(L,1,i);
+lua_rawgeti_hack(L,1,i);
 return n;
 }
 static int luaB_pcall(lua_State*L){
 int status;
-luaL_checkany(L,1);
-status=lua_pcall(L,lua_gettop(L)-1,(-1),0);
-lua_pushboolean(L,(status==0));
-lua_insert(L,1);
-return lua_gettop(L);
+luaL_checkany_hack(L,1);
+status=lua_pcall_hack(L,lua_gettop_hack(L)-1,(-1),0);
+lua_pushboolean_hack(L,(status==0));
+lua_insert_hack(L,1);
+return lua_gettop_hack(L);
 }
 static int luaB_newproxy(lua_State*L){
-lua_settop(L,1);
-lua_newuserdata(L,0);
-if(lua_toboolean(L,1)==0)
+lua_settop_hack(L,1);
+lua_newuserdata_hack(L,0);
+if(lua_toboolean_hack(L,1)==0)
 return 1;
 else if(lua_isboolean(L,1)){
 lua_newtable(L);
-lua_pushvalue(L,-1);
-lua_pushboolean(L,1);
-lua_rawset(L,lua_upvalueindex(1));
+lua_pushvalue_hack(L,-1);
+lua_pushboolean_hack(L,1);
+lua_rawset_hack(L,lua_upvalueindex(1));
 }
 else{
 int validproxy=0;
-if(lua_getmetatable(L,1)){
-lua_rawget(L,lua_upvalueindex(1));
-validproxy=lua_toboolean(L,-1);
+if(lua_getmetatable_hack(L,1)){
+lua_rawget_hack(L,lua_upvalueindex(1));
+validproxy=lua_toboolean_hack(L,-1);
 lua_pop(L,1);
 }
 luaL_argcheck(L,validproxy,1,"boolean or proxy expected");
-lua_getmetatable(L,1);
+lua_getmetatable_hack(L,1);
 }
-lua_setmetatable(L,2);
+lua_setmetatable_hack(L,2);
 return 1;
 }
 static const luaL_Reg base_funcs[]={
@@ -6426,34 +6426,34 @@ static const luaL_Reg base_funcs[]={
 static void auxopen(lua_State*L,const char*name,
 lua_CFunction f,lua_CFunction u){
 lua_pushcfunction(L,u);
-lua_pushcclosure(L,f,1);
-lua_setfield(L,-2,name);
+lua_pushcclosure_hack(L,f,1);
+lua_setfield_hack(L,-2,name);
 }
 static void base_open(lua_State*L){
-lua_pushvalue(L,(-10002));
+lua_pushvalue_hack(L,(-10002));
 lua_setglobal(L,"_G");
-luaL_register(L,"_G",base_funcs);
+luaL_register_hack(L,"_G",base_funcs);
 lua_pushliteral(L,"Lua 5.1");
 lua_setglobal(L,"_VERSION");
 auxopen(L,"ipairs",luaB_ipairs,ipairsaux);
 auxopen(L,"pairs",luaB_pairs,luaB_next);
-lua_createtable(L,0,1);
-lua_pushvalue(L,-1);
-lua_setmetatable(L,-2);
+lua_createtable_hack(L,0,1);
+lua_pushvalue_hack(L,-1);
+lua_setmetatable_hack(L,-2);
 lua_pushliteral(L,"kv");
-lua_setfield(L,-2,"__mode");
-lua_pushcclosure(L,luaB_newproxy,1);
+lua_setfield_hack(L,-2,"__mode");
+lua_pushcclosure_hack(L,luaB_newproxy,1);
 lua_setglobal(L,"newproxy");
 }
-static int luaopen_base(lua_State*L){
+static int luaopen_base_hack(lua_State*L){
 base_open(L);
 return 1;
 }
-#define aux_getn(L,n)(luaL_checktype(L,n,5),luaL_getn(L,n))
+#define aux_getn(L,n)(luaL_checktype_hack(L,n,5),luaL_getn(L,n))
 static int tinsert(lua_State*L){
 int e=aux_getn(L,1)+1;
 int pos;
-switch(lua_gettop(L)){
+switch(lua_gettop_hack(L)){
 case 2:{
 pos=e;
 break;
@@ -6463,17 +6463,17 @@ int i;
 pos=luaL_checkint(L,2);
 if(pos>e)e=pos;
 for(i=e;i>pos;i--){
-lua_rawgeti(L,1,i-1);
-lua_rawseti(L,1,i);
+lua_rawgeti_hack(L,1,i-1);
+lua_rawseti_hack(L,1,i);
 }
 break;
 }
 default:{
-return luaL_error(L,"wrong number of arguments to "LUA_QL("insert"));
+return luaL_error_hack(L,"wrong number of arguments to "LUA_QL("insert"));
 }
 }
 luaL_setn(L,1,e);
-lua_rawseti(L,1,pos);
+lua_rawseti_hack(L,1,pos);
 return 0;
 }
 static int tremove(lua_State*L){
@@ -6482,94 +6482,94 @@ int pos=luaL_optint(L,2,e);
 if(!(1<=pos&&pos<=e))
 return 0;
 luaL_setn(L,1,e-1);
-lua_rawgeti(L,1,pos);
+lua_rawgeti_hack(L,1,pos);
 for(;pos<e;pos++){
-lua_rawgeti(L,1,pos+1);
-lua_rawseti(L,1,pos);
+lua_rawgeti_hack(L,1,pos+1);
+lua_rawseti_hack(L,1,pos);
 }
-lua_pushnil(L);
-lua_rawseti(L,1,e);
+lua_pushnil_hack(L);
+lua_rawseti_hack(L,1,e);
 return 1;
 }
 static void addfield(lua_State*L,luaL_Buffer*b,int i){
-lua_rawgeti(L,1,i);
-if(!lua_isstring(L,-1))
-luaL_error(L,"invalid value (%s) at index %d in table for "
+lua_rawgeti_hack(L,1,i);
+if(!lua_isstring_hack(L,-1))
+luaL_error_hack(L,"invalid value (%s) at index %d in table for "
 LUA_QL("concat"),luaL_typename(L,-1),i);
-luaL_addvalue(b);
+luaL_addvalue_hack(b);
 }
 static int tconcat(lua_State*L){
 luaL_Buffer b;
 size_t lsep;
 int i,last;
-const char*sep=luaL_optlstring(L,2,"",&lsep);
-luaL_checktype(L,1,5);
+const char*sep=luaL_optlstring_hack(L,2,"",&lsep);
+luaL_checktype_hack(L,1,5);
 i=luaL_optint(L,3,1);
 last=luaL_opt(L,luaL_checkint,4,luaL_getn(L,1));
-luaL_buffinit(L,&b);
+luaL_buffinit_hack(L,&b);
 for(;i<last;i++){
 addfield(L,&b,i);
-luaL_addlstring(&b,sep,lsep);
+luaL_addlstring_hack(&b,sep,lsep);
 }
 if(i==last)
 addfield(L,&b,i);
-luaL_pushresult(&b);
+luaL_pushresult_hack(&b);
 return 1;
 }
 static void set2(lua_State*L,int i,int j){
-lua_rawseti(L,1,i);
-lua_rawseti(L,1,j);
+lua_rawseti_hack(L,1,i);
+lua_rawseti_hack(L,1,j);
 }
 static int sort_comp(lua_State*L,int a,int b){
 if(!lua_isnil(L,2)){
 int res;
-lua_pushvalue(L,2);
-lua_pushvalue(L,a-1);
-lua_pushvalue(L,b-2);
-lua_call(L,2,1);
-res=lua_toboolean(L,-1);
+lua_pushvalue_hack(L,2);
+lua_pushvalue_hack(L,a-1);
+lua_pushvalue_hack(L,b-2);
+lua_call_hack(L,2,1);
+res=lua_toboolean_hack(L,-1);
 lua_pop(L,1);
 return res;
 }
 else
-return lua_lessthan(L,a,b);
+return lua_lessthan_hack(L,a,b);
 }
 static void auxsort(lua_State*L,int l,int u){
 while(l<u){
 int i,j;
-lua_rawgeti(L,1,l);
-lua_rawgeti(L,1,u);
+lua_rawgeti_hack(L,1,l);
+lua_rawgeti_hack(L,1,u);
 if(sort_comp(L,-1,-2))
 set2(L,l,u);
 else
 lua_pop(L,2);
 if(u-l==1)break;
 i=(l+u)/2;
-lua_rawgeti(L,1,i);
-lua_rawgeti(L,1,l);
+lua_rawgeti_hack(L,1,i);
+lua_rawgeti_hack(L,1,l);
 if(sort_comp(L,-2,-1))
 set2(L,i,l);
 else{
 lua_pop(L,1);
-lua_rawgeti(L,1,u);
+lua_rawgeti_hack(L,1,u);
 if(sort_comp(L,-1,-2))
 set2(L,i,u);
 else
 lua_pop(L,2);
 }
 if(u-l==2)break;
-lua_rawgeti(L,1,i);
-lua_pushvalue(L,-1);
-lua_rawgeti(L,1,u-1);
+lua_rawgeti_hack(L,1,i);
+lua_pushvalue_hack(L,-1);
+lua_rawgeti_hack(L,1,u-1);
 set2(L,i,u-1);
 i=l;j=u-1;
 for(;;){
-while(lua_rawgeti(L,1,++i),sort_comp(L,-1,-2)){
-if(i>u)luaL_error(L,"invalid order function for sorting");
+while(lua_rawgeti_hack(L,1,++i),sort_comp(L,-1,-2)){
+if(i>u)luaL_error_hack(L,"invalid order function for sorting");
 lua_pop(L,1);
 }
-while(lua_rawgeti(L,1,--j),sort_comp(L,-3,-1)){
-if(j<l)luaL_error(L,"invalid order function for sorting");
+while(lua_rawgeti_hack(L,1,--j),sort_comp(L,-3,-1)){
+if(j<l)luaL_error_hack(L,"invalid order function for sorting");
 lua_pop(L,1);
 }
 if(j<i){
@@ -6578,8 +6578,8 @@ break;
 }
 set2(L,i,j);
 }
-lua_rawgeti(L,1,u-1);
-lua_rawgeti(L,1,i);
+lua_rawgeti_hack(L,1,u-1);
+lua_rawgeti_hack(L,1,i);
 set2(L,u-1,i);
 if(i-l<u-i){
 j=l;i=i-1;l=i+2;
@@ -6592,10 +6592,10 @@ auxsort(L,j,i);
 }
 static int sort(lua_State*L){
 int n=aux_getn(L,1);
-luaL_checkstack(L,40,"");
+luaL_checkstack_hack(L,40,"");
 if(!lua_isnoneornil(L,2))
-luaL_checktype(L,2,6);
-lua_settop(L,2);
+luaL_checktype_hack(L,2,6);
+lua_settop_hack(L,2);
 auxsort(L,1,n);
 return 0;
 }
@@ -6606,39 +6606,39 @@ static const luaL_Reg tab_funcs[]={
 {"sort",sort},
 {NULL,NULL}
 };
-static int luaopen_table(lua_State*L){
-luaL_register(L,"table",tab_funcs);
+static int luaopen_table_hack(lua_State*L){
+luaL_register_hack(L,"table",tab_funcs);
 return 1;
 }
 static const char*const fnames[]={"input","output"};
 static int pushresult(lua_State*L,int i,const char*filename){
 int en=errno;
 if(i){
-lua_pushboolean(L,1);
+lua_pushboolean_hack(L,1);
 return 1;
 }
 else{
-lua_pushnil(L);
+lua_pushnil_hack(L);
 if(filename)
-lua_pushfstring(L,"%s: %s",filename,strerror(en));
+lua_pushfstring_hack(L,"%s: %s",filename,strerror(en));
 else
-lua_pushfstring(L,"%s",strerror(en));
-lua_pushinteger(L,en);
+lua_pushfstring_hack(L,"%s",strerror(en));
+lua_pushinteger_hack(L,en);
 return 3;
 }
 }
 static void fileerror(lua_State*L,int arg,const char*filename){
-lua_pushfstring(L,"%s: %s",filename,strerror(errno));
-luaL_argerror(L,arg,lua_tostring(L,-1));
+lua_pushfstring_hack(L,"%s: %s",filename,strerror(errno));
+luaL_argerror_hack(L,arg,lua_tostring(L,-1));
 }
-#define tofilep(L)((FILE**)luaL_checkudata(L,1,"FILE*"))
+#define tofilep(L)((FILE**)luaL_checkudata_hack(L,1,"FILE*"))
 static int io_type(lua_State*L){
 void*ud;
-luaL_checkany(L,1);
-ud=lua_touserdata(L,1);
-lua_getfield(L,(-10000),"FILE*");
-if(ud==NULL||!lua_getmetatable(L,1)||!lua_rawequal(L,-2,-1))
-lua_pushnil(L);
+luaL_checkany_hack(L,1);
+ud=lua_touserdata_hack(L,1);
+lua_getfield_hack(L,(-10000),"FILE*");
+if(ud==NULL||!lua_getmetatable_hack(L,1)||!lua_rawequal_hack(L,-2,-1))
+lua_pushnil_hack(L);
 else if(*((FILE**)ud)==NULL)
 lua_pushliteral(L,"closed file");
 else
@@ -6648,18 +6648,18 @@ return 1;
 static FILE*tofile(lua_State*L){
 FILE**f=tofilep(L);
 if(*f==NULL)
-luaL_error(L,"attempt to use a closed file");
+luaL_error_hack(L,"attempt to use a closed file");
 return*f;
 }
 static FILE**newfile(lua_State*L){
-FILE**pf=(FILE**)lua_newuserdata(L,sizeof(FILE*));
+FILE**pf=(FILE**)lua_newuserdata_hack(L,sizeof(FILE*));
 *pf=NULL;
 luaL_getmetatable(L,"FILE*");
-lua_setmetatable(L,-2);
+lua_setmetatable_hack(L,-2);
 return pf;
 }
 static int io_noclose(lua_State*L){
-lua_pushnil(L);
+lua_pushnil_hack(L);
 lua_pushliteral(L,"cannot close standard file");
 return 2;
 }
@@ -6676,13 +6676,13 @@ int ok=(fclose(*p)==0);
 return pushresult(L,ok,NULL);
 }
 static int aux_close(lua_State*L){
-lua_getfenv(L,1);
-lua_getfield(L,-1,"__close");
-return(lua_tocfunction(L,-1))(L);
+lua_getfenv_hack(L,1);
+lua_getfield_hack(L,-1,"__close");
+return(lua_tocfunction_hack(L,-1))(L);
 }
 static int io_close(lua_State*L){
 if(lua_isnone(L,1))
-lua_rawgeti(L,(-10001),2);
+lua_rawgeti_hack(L,(-10001),2);
 tofile(L);
 return aux_close(L);
 }
@@ -6701,10 +6701,10 @@ return(*pf==NULL)?pushresult(L,0,filename):1;
 }
 static FILE*getiofile(lua_State*L,int findex){
 FILE*f;
-lua_rawgeti(L,(-10001),findex);
-f=*(FILE**)lua_touserdata(L,-1);
+lua_rawgeti_hack(L,(-10001),findex);
+f=*(FILE**)lua_touserdata_hack(L,-1);
 if(f==NULL)
-luaL_error(L,"standard %s file is closed",fnames[findex-1]);
+luaL_error_hack(L,"standard %s file is closed",fnames[findex-1]);
 return f;
 }
 static int g_iofile(lua_State*L,int f,const char*mode){
@@ -6718,11 +6718,11 @@ fileerror(L,1,filename);
 }
 else{
 tofile(L);
-lua_pushvalue(L,1);
+lua_pushvalue_hack(L,1);
 }
-lua_rawseti(L,(-10001),f);
+lua_rawseti_hack(L,(-10001),f);
 }
-lua_rawgeti(L,(-10001),f);
+lua_rawgeti_hack(L,(-10001),f);
 return 1;
 }
 static int io_input(lua_State*L){
@@ -6733,9 +6733,9 @@ return g_iofile(L,2,"w");
 }
 static int io_readline(lua_State*L);
 static void aux_lines(lua_State*L,int idx,int toclose){
-lua_pushvalue(L,idx);
-lua_pushboolean(L,toclose);
-lua_pushcclosure(L,io_readline,2);
+lua_pushvalue_hack(L,idx);
+lua_pushboolean_hack(L,toclose);
+lua_pushcclosure_hack(L,io_readline,2);
 }
 static int f_lines(lua_State*L){
 tofile(L);
@@ -6744,7 +6744,7 @@ return 1;
 }
 static int io_lines(lua_State*L){
 if(lua_isnoneornil(L,1)){
-lua_rawgeti(L,(-10001),1);
+lua_rawgeti_hack(L,(-10001),1);
 return f_lines(L);
 }
 else{
@@ -6753,43 +6753,43 @@ FILE**pf=newfile(L);
 *pf=fopen(filename,"r");
 if(*pf==NULL)
 fileerror(L,1,filename);
-aux_lines(L,lua_gettop(L),1);
+aux_lines(L,lua_gettop_hack(L),1);
 return 1;
 }
 }
 static int read_number(lua_State*L,FILE*f){
 lua_Number d;
 if(fscanf(f,"%lf",&d)==1){
-lua_pushnumber(L,d);
+lua_pushnumber_hack(L,d);
 return 1;
 }
 else{
-lua_pushnil(L);
+lua_pushnil_hack(L);
 return 0;
 }
 }
 static int test_eof(lua_State*L,FILE*f){
 int c=getc(f);
 ungetc(c,f);
-lua_pushlstring(L,NULL,0);
+lua_pushlstring_hack(L,NULL,0);
 return(c!=EOF);
 }
 static int read_line(lua_State*L,FILE*f){
 luaL_Buffer b;
-luaL_buffinit(L,&b);
+luaL_buffinit_hack(L,&b);
 for(;;){
 size_t l;
-char*p=luaL_prepbuffer(&b);
+char*p=luaL_prepbuffer_hack(&b);
 if(fgets(p,BUFSIZ,f)==NULL){
-luaL_pushresult(&b);
-return(lua_objlen(L,-1)>0);
+luaL_pushresult_hack(&b);
+return(lua_objlen_hack(L,-1)>0);
 }
 l=strlen(p);
 if(l==0||p[l-1]!='\n')
 luaL_addsize(&b,l);
 else{
 luaL_addsize(&b,l-1);
-luaL_pushresult(&b);
+luaL_pushresult_hack(&b);
 return 1;
 }
 }
@@ -6798,20 +6798,20 @@ static int read_chars(lua_State*L,FILE*f,size_t n){
 size_t rlen;
 size_t nr;
 luaL_Buffer b;
-luaL_buffinit(L,&b);
+luaL_buffinit_hack(L,&b);
 rlen=BUFSIZ;
 do{
-char*p=luaL_prepbuffer(&b);
+char*p=luaL_prepbuffer_hack(&b);
 if(rlen>n)rlen=n;
 nr=fread(p,sizeof(char),rlen,f);
 luaL_addsize(&b,nr);
 n-=nr;
 }while(n>0&&nr==rlen);
-luaL_pushresult(&b);
-return(n==0||lua_objlen(L,-1)>0);
+luaL_pushresult_hack(&b);
+return(n==0||lua_objlen_hack(L,-1)>0);
 }
 static int g_read(lua_State*L,FILE*f,int first){
-int nargs=lua_gettop(L)-1;
+int nargs=lua_gettop_hack(L)-1;
 int success;
 int n;
 clearerr(f);
@@ -6820,11 +6820,11 @@ success=read_line(L,f);
 n=first+1;
 }
 else{
-luaL_checkstack(L,nargs+20,"too many arguments");
+luaL_checkstack_hack(L,nargs+20,"too many arguments");
 success=1;
 for(n=first;nargs--&&success;n++){
-if(lua_type(L,n)==3){
-size_t l=(size_t)lua_tointeger(L,n);
+if(lua_type_hack(L,n)==3){
+size_t l=(size_t)lua_tointeger_hack(L,n);
 success=(l==0)?test_eof(L,f):read_chars(L,f,l);
 }
 else{
@@ -6842,7 +6842,7 @@ read_chars(L,f,~((size_t)0));
 success=1;
 break;
 default:
-return luaL_argerror(L,n,"invalid format");
+return luaL_argerror_hack(L,n,"invalid format");
 }
 }
 }
@@ -6851,7 +6851,7 @@ if(ferror(f))
 return pushresult(L,0,NULL);
 if(!success){
 lua_pop(L,1);
-lua_pushnil(L);
+lua_pushnil_hack(L);
 }
 return n-first;
 }
@@ -6862,34 +6862,34 @@ static int f_read(lua_State*L){
 return g_read(L,tofile(L),2);
 }
 static int io_readline(lua_State*L){
-FILE*f=*(FILE**)lua_touserdata(L,lua_upvalueindex(1));
+FILE*f=*(FILE**)lua_touserdata_hack(L,lua_upvalueindex(1));
 int sucess;
 if(f==NULL)
-luaL_error(L,"file is already closed");
+luaL_error_hack(L,"file is already closed");
 sucess=read_line(L,f);
 if(ferror(f))
-return luaL_error(L,"%s",strerror(errno));
+return luaL_error_hack(L,"%s",strerror(errno));
 if(sucess)return 1;
 else{
-if(lua_toboolean(L,lua_upvalueindex(2))){
-lua_settop(L,0);
-lua_pushvalue(L,lua_upvalueindex(1));
+if(lua_toboolean_hack(L,lua_upvalueindex(2))){
+lua_settop_hack(L,0);
+lua_pushvalue_hack(L,lua_upvalueindex(1));
 aux_close(L);
 }
 return 0;
 }
 }
 static int g_write(lua_State*L,FILE*f,int arg){
-int nargs=lua_gettop(L)-1;
+int nargs=lua_gettop_hack(L)-1;
 int status=1;
 for(;nargs--;arg++){
-if(lua_type(L,arg)==3){
+if(lua_type_hack(L,arg)==3){
 status=status&&
-fprintf(f,"%.14g",lua_tonumber(L,arg))>0;
+fprintf(f,"%.14g",lua_tonumber_hack(L,arg))>0;
 }
 else{
 size_t l;
-const char*s=luaL_checklstring(L,arg,&l);
+const char*s=luaL_checklstring_hack(L,arg,&l);
 status=status&&(fwrite(s,sizeof(char),l,f)==l);
 }
 }
@@ -6929,52 +6929,52 @@ static const luaL_Reg flib[]={
 {NULL,NULL}
 };
 static void createmeta(lua_State*L){
-luaL_newmetatable(L,"FILE*");
-lua_pushvalue(L,-1);
-lua_setfield(L,-2,"__index");
-luaL_register(L,NULL,flib);
+luaL_newmetatable_hack(L,"FILE*");
+lua_pushvalue_hack(L,-1);
+lua_setfield_hack(L,-2,"__index");
+luaL_register_hack(L,NULL,flib);
 }
 static void createstdfile(lua_State*L,FILE*f,int k,const char*fname){
 *newfile(L)=f;
 if(k>0){
-lua_pushvalue(L,-1);
-lua_rawseti(L,(-10001),k);
+lua_pushvalue_hack(L,-1);
+lua_rawseti_hack(L,(-10001),k);
 }
-lua_pushvalue(L,-2);
-lua_setfenv(L,-2);
-lua_setfield(L,-3,fname);
+lua_pushvalue_hack(L,-2);
+lua_setfenv_hack(L,-2);
+lua_setfield_hack(L,-3,fname);
 }
 static void newfenv(lua_State*L,lua_CFunction cls){
-lua_createtable(L,0,1);
+lua_createtable_hack(L,0,1);
 lua_pushcfunction(L,cls);
-lua_setfield(L,-2,"__close");
+lua_setfield_hack(L,-2,"__close");
 }
 static int luaopen_io(lua_State*L){
 createmeta(L);
 newfenv(L,io_fclose);
-lua_replace(L,(-10001));
-luaL_register(L,"io",iolib);
+lua_replace_hack(L,(-10001));
+luaL_register_hack(L,"io",iolib);
 newfenv(L,io_noclose);
 createstdfile(L,stdin,1,"stdin");
 createstdfile(L,stdout,2,"stdout");
 createstdfile(L,stderr,0,"stderr");
 lua_pop(L,1);
-lua_getfield(L,-1,"popen");
+lua_getfield_hack(L,-1,"popen");
 newfenv(L,io_pclose);
-lua_setfenv(L,-2);
+lua_setfenv_hack(L,-2);
 lua_pop(L,1);
 return 1;
 }
 static int os_pushresult(lua_State*L,int i,const char*filename){
 int en=errno;
 if(i){
-lua_pushboolean(L,1);
+lua_pushboolean_hack(L,1);
 return 1;
 }
 else{
-lua_pushnil(L);
-lua_pushfstring(L,"%s: %s",filename,strerror(en));
-lua_pushinteger(L,en);
+lua_pushnil_hack(L);
+lua_pushfstring_hack(L,"%s: %s",filename,strerror(en));
+lua_pushinteger_hack(L,en);
 return 3;
 }
 }
@@ -6990,8 +6990,8 @@ static const luaL_Reg syslib[]={
 {"remove",os_remove},
 {NULL,NULL}
 };
-static int luaopen_os(lua_State*L){
-luaL_register(L,"os",syslib);
+static int luaopen_os_hack(lua_State*L){
+luaL_register_hack(L,"os",syslib);
 return 1;
 }
 #define uchar(c)((unsigned char)(c))
@@ -7001,13 +7001,13 @@ return(pos>=0)?pos:0;
 }
 static int str_sub(lua_State*L){
 size_t l;
-const char*s=luaL_checklstring(L,1,&l);
-ptrdiff_t start=posrelat(luaL_checkinteger(L,2),l);
-ptrdiff_t end=posrelat(luaL_optinteger(L,3,-1),l);
+const char*s=luaL_checklstring_hack(L,1,&l);
+ptrdiff_t start=posrelat(luaL_checkinteger_hack(L,2),l);
+ptrdiff_t end=posrelat(luaL_optinteger_hack(L,3,-1),l);
 if(start<1)start=1;
 if(end>(ptrdiff_t)l)end=(ptrdiff_t)l;
 if(start<=end)
-lua_pushlstring(L,s+start-1,end-start+1);
+lua_pushlstring_hack(L,s+start-1,end-start+1);
 else lua_pushliteral(L,"");
 return 1;
 }
@@ -7015,63 +7015,63 @@ static int str_lower(lua_State*L){
 size_t l;
 size_t i;
 luaL_Buffer b;
-const char*s=luaL_checklstring(L,1,&l);
-luaL_buffinit(L,&b);
+const char*s=luaL_checklstring_hack(L,1,&l);
+luaL_buffinit_hack(L,&b);
 for(i=0;i<l;i++)
 luaL_addchar(&b,tolower(uchar(s[i])));
-luaL_pushresult(&b);
+luaL_pushresult_hack(&b);
 return 1;
 }
 static int str_upper(lua_State*L){
 size_t l;
 size_t i;
 luaL_Buffer b;
-const char*s=luaL_checklstring(L,1,&l);
-luaL_buffinit(L,&b);
+const char*s=luaL_checklstring_hack(L,1,&l);
+luaL_buffinit_hack(L,&b);
 for(i=0;i<l;i++)
 luaL_addchar(&b,toupper(uchar(s[i])));
-luaL_pushresult(&b);
+luaL_pushresult_hack(&b);
 return 1;
 }
 static int str_rep(lua_State*L){
 size_t l;
 luaL_Buffer b;
-const char*s=luaL_checklstring(L,1,&l);
+const char*s=luaL_checklstring_hack(L,1,&l);
 int n=luaL_checkint(L,2);
-luaL_buffinit(L,&b);
+luaL_buffinit_hack(L,&b);
 while(n-->0)
-luaL_addlstring(&b,s,l);
-luaL_pushresult(&b);
+luaL_addlstring_hack(&b,s,l);
+luaL_pushresult_hack(&b);
 return 1;
 }
 static int str_byte(lua_State*L){
 size_t l;
-const char*s=luaL_checklstring(L,1,&l);
-ptrdiff_t posi=posrelat(luaL_optinteger(L,2,1),l);
-ptrdiff_t pose=posrelat(luaL_optinteger(L,3,posi),l);
+const char*s=luaL_checklstring_hack(L,1,&l);
+ptrdiff_t posi=posrelat(luaL_optinteger_hack(L,2,1),l);
+ptrdiff_t pose=posrelat(luaL_optinteger_hack(L,3,posi),l);
 int n,i;
 if(posi<=0)posi=1;
 if((size_t)pose>l)pose=l;
 if(posi>pose)return 0;
 n=(int)(pose-posi+1);
 if(posi+n<=pose)
-luaL_error(L,"string slice too long");
-luaL_checkstack(L,n,"string slice too long");
+luaL_error_hack(L,"string slice too long");
+luaL_checkstack_hack(L,n,"string slice too long");
 for(i=0;i<n;i++)
-lua_pushinteger(L,uchar(s[posi+i-1]));
+lua_pushinteger_hack(L,uchar(s[posi+i-1]));
 return n;
 }
 static int str_char(lua_State*L){
-int n=lua_gettop(L);
+int n=lua_gettop_hack(L);
 int i;
 luaL_Buffer b;
-luaL_buffinit(L,&b);
+luaL_buffinit_hack(L,&b);
 for(i=1;i<=n;i++){
 int c=luaL_checkint(L,i);
 luaL_argcheck(L,uchar(c)==c,i,"invalid value");
 luaL_addchar(&b,uchar(c));
 }
-luaL_pushresult(&b);
+luaL_pushresult_hack(&b);
 return 1;
 }
 typedef struct MatchState{
@@ -7087,27 +7087,27 @@ ptrdiff_t len;
 static int check_capture(MatchState*ms,int l){
 l-='1';
 if(l<0||l>=ms->level||ms->capture[l].len==(-1))
-return luaL_error(ms->L,"invalid capture index");
+return luaL_error_hack(ms->L,"invalid capture index");
 return l;
 }
 static int capture_to_close(MatchState*ms){
 int level=ms->level;
 for(level--;level>=0;level--)
 if(ms->capture[level].len==(-1))return level;
-return luaL_error(ms->L,"invalid pattern capture");
+return luaL_error_hack(ms->L,"invalid pattern capture");
 }
 static const char*classend(MatchState*ms,const char*p){
 switch(*p++){
 case'%':{
 if(*p=='\0')
-luaL_error(ms->L,"malformed pattern (ends with "LUA_QL("%%")")");
+luaL_error_hack(ms->L,"malformed pattern (ends with "LUA_QL("%%")")");
 return p+1;
 }
 case'[':{
 if(*p=='^')p++;
 do{
 if(*p=='\0')
-luaL_error(ms->L,"malformed pattern (missing "LUA_QL("]")")");
+luaL_error_hack(ms->L,"malformed pattern (missing "LUA_QL("]")")");
 if(*(p++)=='%'&&*p!='\0')
 p++;
 }while(*p!=']');
@@ -7168,7 +7168,7 @@ static const char*match(MatchState*ms,const char*s,const char*p);
 static const char*matchbalance(MatchState*ms,const char*s,
 const char*p){
 if(*p==0||*(p+1)==0)
-luaL_error(ms->L,"unbalanced pattern");
+luaL_error_hack(ms->L,"unbalanced pattern");
 if(*s!=*p)return NULL;
 else{
 int b=*p;
@@ -7210,7 +7210,7 @@ static const char*start_capture(MatchState*ms,const char*s,
 const char*p,int what){
 const char*res;
 int level=ms->level;
-if(level>=32)luaL_error(ms->L,"too many captures");
+if(level>=32)luaL_error_hack(ms->L,"too many captures");
 ms->capture[level].init=s;
 ms->capture[level].len=what;
 ms->level=level+1;
@@ -7259,7 +7259,7 @@ case'f':{
 const char*ep;char previous;
 p+=2;
 if(*p!='[')
-luaL_error(ms->L,"missing "LUA_QL("[")" after "
+luaL_error_hack(ms->L,"missing "LUA_QL("[")" after "
 LUA_QL("%%f")" in pattern");
 ep=classend(ms,p);
 previous=(s==ms->src_init)?'\0':*(s-1);
@@ -7336,40 +7336,40 @@ static void push_onecapture(MatchState*ms,int i,const char*s,
 const char*e){
 if(i>=ms->level){
 if(i==0)
-lua_pushlstring(ms->L,s,e-s);
+lua_pushlstring_hack(ms->L,s,e-s);
 else
-luaL_error(ms->L,"invalid capture index");
+luaL_error_hack(ms->L,"invalid capture index");
 }
 else{
 ptrdiff_t l=ms->capture[i].len;
-if(l==(-1))luaL_error(ms->L,"unfinished capture");
+if(l==(-1))luaL_error_hack(ms->L,"unfinished capture");
 if(l==(-2))
-lua_pushinteger(ms->L,ms->capture[i].init-ms->src_init+1);
+lua_pushinteger_hack(ms->L,ms->capture[i].init-ms->src_init+1);
 else
-lua_pushlstring(ms->L,ms->capture[i].init,l);
+lua_pushlstring_hack(ms->L,ms->capture[i].init,l);
 }
 }
 static int push_captures(MatchState*ms,const char*s,const char*e){
 int i;
 int nlevels=(ms->level==0&&s)?1:ms->level;
-luaL_checkstack(ms->L,nlevels,"too many captures");
+luaL_checkstack_hack(ms->L,nlevels,"too many captures");
 for(i=0;i<nlevels;i++)
 push_onecapture(ms,i,s,e);
 return nlevels;
 }
 static int str_find_aux(lua_State*L,int find){
 size_t l1,l2;
-const char*s=luaL_checklstring(L,1,&l1);
-const char*p=luaL_checklstring(L,2,&l2);
-ptrdiff_t init=posrelat(luaL_optinteger(L,3,1),l1)-1;
+const char*s=luaL_checklstring_hack(L,1,&l1);
+const char*p=luaL_checklstring_hack(L,2,&l2);
+ptrdiff_t init=posrelat(luaL_optinteger_hack(L,3,1),l1)-1;
 if(init<0)init=0;
 else if((size_t)(init)>l1)init=(ptrdiff_t)l1;
-if(find&&(lua_toboolean(L,4)||
+if(find&&(lua_toboolean_hack(L,4)||
 strpbrk(p,"^$*+?.([%-")==NULL)){
 const char*s2=lmemfind(s+init,l1-init,p,l2);
 if(s2){
-lua_pushinteger(L,s2-s+1);
-lua_pushinteger(L,s2-s+l2);
+lua_pushinteger_hack(L,s2-s+1);
+lua_pushinteger_hack(L,s2-s+l2);
 return 2;
 }
 }
@@ -7385,8 +7385,8 @@ const char*res;
 ms.level=0;
 if((res=match(&ms,s1,p))!=NULL){
 if(find){
-lua_pushinteger(L,s1-s+1);
-lua_pushinteger(L,res-s);
+lua_pushinteger_hack(L,s1-s+1);
+lua_pushinteger_hack(L,res-s);
 return push_captures(&ms,NULL,0)+2;
 }
 else
@@ -7394,7 +7394,7 @@ return push_captures(&ms,s1,res);
 }
 }while(s1++<ms.src_end&&!anchor);
 }
-lua_pushnil(L);
+lua_pushnil_hack(L);
 return 1;
 }
 static int str_find(lua_State*L){
@@ -7406,13 +7406,13 @@ return str_find_aux(L,0);
 static int gmatch_aux(lua_State*L){
 MatchState ms;
 size_t ls;
-const char*s=lua_tolstring(L,lua_upvalueindex(1),&ls);
+const char*s=lua_tolstring_hack(L,lua_upvalueindex(1),&ls);
 const char*p=lua_tostring(L,lua_upvalueindex(2));
 const char*src;
 ms.L=L;
 ms.src_init=s;
 ms.src_end=s+ls;
-for(src=s+(size_t)lua_tointeger(L,lua_upvalueindex(3));
+for(src=s+(size_t)lua_tointeger_hack(L,lua_upvalueindex(3));
 src<=ms.src_end;
 src++){
 const char*e;
@@ -7420,8 +7420,8 @@ ms.level=0;
 if((e=match(&ms,src,p))!=NULL){
 lua_Integer newstart=e-s;
 if(e==src)newstart++;
-lua_pushinteger(L,newstart);
-lua_replace(L,lua_upvalueindex(3));
+lua_pushinteger_hack(L,newstart);
+lua_replace_hack(L,lua_upvalueindex(3));
 return push_captures(&ms,src,e);
 }
 }
@@ -7430,15 +7430,15 @@ return 0;
 static int gmatch(lua_State*L){
 luaL_checkstring(L,1);
 luaL_checkstring(L,2);
-lua_settop(L,2);
-lua_pushinteger(L,0);
-lua_pushcclosure(L,gmatch_aux,3);
+lua_settop_hack(L,2);
+lua_pushinteger_hack(L,0);
+lua_pushcclosure_hack(L,gmatch_aux,3);
 return 1;
 }
 static void add_s(MatchState*ms,luaL_Buffer*b,const char*s,
 const char*e){
 size_t l,i;
-const char*news=lua_tolstring(ms->L,3,&l);
+const char*news=lua_tolstring_hack(ms->L,3,&l);
 for(i=0;i<l;i++){
 if(news[i]!='%')
 luaL_addchar(b,news[i]);
@@ -7447,10 +7447,10 @@ i++;
 if(!isdigit(uchar(news[i])))
 luaL_addchar(b,news[i]);
 else if(news[i]=='0')
-luaL_addlstring(b,s,e-s);
+luaL_addlstring_hack(b,s,e-s);
 else{
 push_onecapture(ms,news[i]-'1',s,e);
-luaL_addvalue(b);
+luaL_addvalue_hack(b);
 }
 }
 }
@@ -7458,7 +7458,7 @@ luaL_addvalue(b);
 static void add_value(MatchState*ms,luaL_Buffer*b,const char*s,
 const char*e){
 lua_State*L=ms->L;
-switch(lua_type(L,3)){
+switch(lua_type_hack(L,3)){
 case 3:
 case 4:{
 add_s(ms,b,s,e);
@@ -7466,30 +7466,30 @@ return;
 }
 case 6:{
 int n;
-lua_pushvalue(L,3);
+lua_pushvalue_hack(L,3);
 n=push_captures(ms,s,e);
-lua_call(L,n,1);
+lua_call_hack(L,n,1);
 break;
 }
 case 5:{
 push_onecapture(ms,0,s,e);
-lua_gettable(L,3);
+lua_gettable_hack(L,3);
 break;
 }
 }
-if(!lua_toboolean(L,-1)){
+if(!lua_toboolean_hack(L,-1)){
 lua_pop(L,1);
-lua_pushlstring(L,s,e-s);
+lua_pushlstring_hack(L,s,e-s);
 }
-else if(!lua_isstring(L,-1))
-luaL_error(L,"invalid replacement value (a %s)",luaL_typename(L,-1));
-luaL_addvalue(b);
+else if(!lua_isstring_hack(L,-1))
+luaL_error_hack(L,"invalid replacement value (a %s)",luaL_typename(L,-1));
+luaL_addvalue_hack(b);
 }
 static int str_gsub(lua_State*L){
 size_t srcl;
-const char*src=luaL_checklstring(L,1,&srcl);
+const char*src=luaL_checklstring_hack(L,1,&srcl);
 const char*p=luaL_checkstring(L,2);
-int tr=lua_type(L,3);
+int tr=lua_type_hack(L,3);
 int max_s=luaL_optint(L,4,srcl+1);
 int anchor=(*p=='^')?(p++,1):0;
 int n=0;
@@ -7498,7 +7498,7 @@ luaL_Buffer b;
 luaL_argcheck(L,tr==3||tr==4||
 tr==6||tr==5,3,
 "string/function/table expected");
-luaL_buffinit(L,&b);
+luaL_buffinit_hack(L,&b);
 ms.L=L;
 ms.src_init=src;
 ms.src_end=src+srcl;
@@ -7517,14 +7517,14 @@ luaL_addchar(&b,*src++);
 else break;
 if(anchor)break;
 }
-luaL_addlstring(&b,src,ms.src_end-src);
-luaL_pushresult(&b);
-lua_pushinteger(L,n);
+luaL_addlstring_hack(&b,src,ms.src_end-src);
+luaL_pushresult_hack(&b);
+lua_pushinteger_hack(L,n);
 return 2;
 }
 static void addquoted(lua_State*L,luaL_Buffer*b,int arg){
 size_t l;
-const char*s=luaL_checklstring(L,arg,&l);
+const char*s=luaL_checklstring_hack(L,arg,&l);
 luaL_addchar(b,'"');
 while(l--){
 switch(*s){
@@ -7534,11 +7534,11 @@ luaL_addchar(b,*s);
 break;
 }
 case'\r':{
-luaL_addlstring(b,"\\r",2);
+luaL_addlstring_hack(b,"\\r",2);
 break;
 }
 case'\0':{
-luaL_addlstring(b,"\\000",4);
+luaL_addlstring_hack(b,"\\000",4);
 break;
 }
 default:{
@@ -7554,7 +7554,7 @@ static const char*scanformat(lua_State*L,const char*strfrmt,char*form){
 const char*p=strfrmt;
 while(*p!='\0'&&strchr("-+ #0",*p)!=NULL)p++;
 if((size_t)(p-strfrmt)>=sizeof("-+ #0"))
-luaL_error(L,"invalid format (repeated flags)");
+luaL_error_hack(L,"invalid format (repeated flags)");
 if(isdigit(uchar(*p)))p++;
 if(isdigit(uchar(*p)))p++;
 if(*p=='.'){
@@ -7563,7 +7563,7 @@ if(isdigit(uchar(*p)))p++;
 if(isdigit(uchar(*p)))p++;
 }
 if(isdigit(uchar(*p)))
-luaL_error(L,"invalid format (width or precision too long)");
+luaL_error_hack(L,"invalid format (width or precision too long)");
 *(form++)='%';
 strncpy(form,strfrmt,p-strfrmt+1);
 form+=p-strfrmt+1;
@@ -7578,13 +7578,13 @@ form[l+sizeof("l")-2]=spec;
 form[l+sizeof("l")-1]='\0';
 }
 static int str_format(lua_State*L){
-int top=lua_gettop(L);
+int top=lua_gettop_hack(L);
 int arg=1;
 size_t sfl;
-const char*strfrmt=luaL_checklstring(L,arg,&sfl);
+const char*strfrmt=luaL_checklstring_hack(L,arg,&sfl);
 const char*strfrmt_end=strfrmt+sfl;
 luaL_Buffer b;
-luaL_buffinit(L,&b);
+luaL_buffinit_hack(L,&b);
 while(strfrmt<strfrmt_end){
 if(*strfrmt!='%')
 luaL_addchar(&b,*strfrmt++);
@@ -7594,26 +7594,26 @@ else{
 char form[(sizeof("-+ #0")+sizeof("l")+10)];
 char buff[512];
 if(++arg>top)
-luaL_argerror(L,arg,"no value");
+luaL_argerror_hack(L,arg,"no value");
 strfrmt=scanformat(L,strfrmt,form);
 switch(*strfrmt++){
 case'c':{
-sprintf(buff,form,(int)luaL_checknumber(L,arg));
+sprintf(buff,form,(int)luaL_checknumber_hack(L,arg));
 break;
 }
 case'd':case'i':{
 addintlen(form);
-sprintf(buff,form,(long)luaL_checknumber(L,arg));
+sprintf(buff,form,(long)luaL_checknumber_hack(L,arg));
 break;
 }
 case'o':case'u':case'x':case'X':{
 addintlen(form);
-sprintf(buff,form,(unsigned long)luaL_checknumber(L,arg));
+sprintf(buff,form,(unsigned long)luaL_checknumber_hack(L,arg));
 break;
 }
 case'e':case'E':case'f':
 case'g':case'G':{
-sprintf(buff,form,(double)luaL_checknumber(L,arg));
+sprintf(buff,form,(double)luaL_checknumber_hack(L,arg));
 break;
 }
 case'q':{
@@ -7622,10 +7622,10 @@ continue;
 }
 case's':{
 size_t l;
-const char*s=luaL_checklstring(L,arg,&l);
+const char*s=luaL_checklstring_hack(L,arg,&l);
 if(!strchr(form,'.')&&l>=100){
-lua_pushvalue(L,arg);
-luaL_addvalue(&b);
+lua_pushvalue_hack(L,arg);
+luaL_addvalue_hack(&b);
 continue;
 }
 else{
@@ -7634,14 +7634,14 @@ break;
 }
 }
 default:{
-return luaL_error(L,"invalid option "LUA_QL("%%%c")" to "
+return luaL_error_hack(L,"invalid option "LUA_QL("%%%c")" to "
 LUA_QL("format"),*(strfrmt-1));
 }
 }
-luaL_addlstring(&b,buff,strlen(buff));
+luaL_addlstring_hack(&b,buff,strlen(buff));
 }
 }
-luaL_pushresult(&b);
+luaL_pushresult_hack(&b);
 return 1;
 }
 static const luaL_Reg strlib[]={
@@ -7659,54 +7659,54 @@ static const luaL_Reg strlib[]={
 {NULL,NULL}
 };
 static void createmetatable(lua_State*L){
-lua_createtable(L,0,1);
+lua_createtable_hack(L,0,1);
 lua_pushliteral(L,"");
-lua_pushvalue(L,-2);
-lua_setmetatable(L,-2);
+lua_pushvalue_hack(L,-2);
+lua_setmetatable_hack(L,-2);
 lua_pop(L,1);
-lua_pushvalue(L,-2);
-lua_setfield(L,-2,"__index");
+lua_pushvalue_hack(L,-2);
+lua_setfield_hack(L,-2,"__index");
 lua_pop(L,1);
 }
-static int luaopen_string(lua_State*L){
-luaL_register(L,"string",strlib);
+static int luaopen_string_hack(lua_State*L){
+luaL_register_hack(L,"string",strlib);
 createmetatable(L);
 return 1;
 }
 static const luaL_Reg lualibs[]={
-{"",luaopen_base},
-{"table",luaopen_table},
+{"",luaopen_base_hack},
+{"table",luaopen_table_hack},
 {"io",luaopen_io},
-{"os",luaopen_os},
-{"string",luaopen_string},
+{"os",luaopen_os_hack},
+{"string",luaopen_string_hack},
 {NULL,NULL}
 };
-static void luaL_openlibs(lua_State*L){
+static void luaL_openlibs_hack(lua_State*L){
 const luaL_Reg*lib=lualibs;
 for(;lib->func;lib++){
 lua_pushcfunction(L,lib->func);
-lua_pushstring(L,lib->name);
-lua_call(L,1,0);
+lua_pushstring_hack(L,lib->name);
+lua_call_hack(L,1,0);
 }
 }
 typedef unsigned int UB;
 static UB barg(lua_State*L,int idx){
 union{lua_Number n;U64 b;}bn;
-bn.n=lua_tonumber(L,idx)+6755399441055744.0;
-if(bn.n==0.0&&!lua_isnumber(L,idx))luaL_typerror(L,idx,"number");
+bn.n=lua_tonumber_hack(L,idx)+6755399441055744.0;
+if(bn.n==0.0&&!lua_isnumber_hack(L,idx))luaL_typerror_hack(L,idx,"number");
 return(UB)bn.b;
 }
-#define BRET(b)lua_pushnumber(L,(lua_Number)(int)(b));return 1;
+#define BRET(b)lua_pushnumber_hack(L,(lua_Number)(int)(b));return 1;
 static int tobit(lua_State*L){
 BRET(barg(L,1))}
 static int bnot(lua_State*L){
 BRET(~barg(L,1))}
 static int band(lua_State*L){
-int i;UB b=barg(L,1);for(i=lua_gettop(L);i>1;i--)b&=barg(L,i);BRET(b)}
+int i;UB b=barg(L,1);for(i=lua_gettop_hack(L);i>1;i--)b&=barg(L,i);BRET(b)}
 static int bor(lua_State*L){
-int i;UB b=barg(L,1);for(i=lua_gettop(L);i>1;i--)b|=barg(L,i);BRET(b)}
+int i;UB b=barg(L,1);for(i=lua_gettop_hack(L);i>1;i--)b|=barg(L,i);BRET(b)}
 static int bxor(lua_State*L){
-int i;UB b=barg(L,1);for(i=lua_gettop(L);i>1;i--)b^=barg(L,i);BRET(b)}
+int i;UB b=barg(L,1);for(i=lua_gettop_hack(L);i>1;i--)b^=barg(L,i);BRET(b)}
 static int lshift(lua_State*L){
 UB b=barg(L,1),n=barg(L,2)&31;BRET(b<<n)}
 static int rshift(lua_State*L){
@@ -7728,7 +7728,7 @@ int i;
 if(n<0){n=-n;hexdigits="0123456789ABCDEF";}
 if(n>8)n=8;
 for(i=(int)n;--i>=0;){buf[i]=hexdigits[b&15];b>>=4;}
-lua_pushlstring(L,buf,(size_t)n);
+lua_pushlstring_hack(L,buf,(size_t)n);
 return 1;
 }
 static const struct luaL_Reg bitlib[]={
@@ -7747,24 +7747,24 @@ static const struct luaL_Reg bitlib[]={
 {NULL,NULL}
 };
 int main(int argc,char**argv){
-lua_State*L=luaL_newstate();
+lua_State*L=luaL_newstate_hack();
 int i;
-luaL_openlibs(L);
-luaL_register(L,"bit",bitlib);
+luaL_openlibs_hack(L);
+luaL_register_hack(L,"bit",bitlib);
 if(argc<2)return sizeof(void*);
-lua_createtable(L,0,1);
-lua_pushstring(L,argv[1]);
-lua_rawseti(L,-2,0);
+lua_createtable_hack(L,0,1);
+lua_pushstring_hack(L,argv[1]);
+lua_rawseti_hack(L,-2,0);
 lua_setglobal(L,"arg");
-if(luaL_loadfile(L,argv[1]))
+if(luaL_loadfile_hack(L,argv[1]))
 goto err;
 for(i=2;i<argc;i++)
-lua_pushstring(L,argv[i]);
-if(lua_pcall(L,argc-2,0,0)){
+lua_pushstring_hack(L,argv[i]);
+if(lua_pcall_hack(L,argc-2,0,0)){
 err:
 fprintf(stderr,"Error: %s\n",lua_tostring(L,-1));
 return 1;
 }
-lua_close(L);
+lua_close_hack(L);
 return 0;
 }

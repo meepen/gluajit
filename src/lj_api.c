@@ -77,12 +77,12 @@ static GCtab *getcurrenv(lua_State *L)
 
 /* -- Miscellaneous API functions ----------------------------------------- */
 
-LUA_API int lua_status(lua_State *L)
+LUA_API int lua_status_hack(lua_State *L)
 {
   return L->status;
 }
 
-LUA_API int lua_checkstack(lua_State *L, int size)
+LUA_API int lua_checkstack_hack(lua_State *L, int size)
 {
   if (size > LUAI_MAXCSTACK || (L->top - L->base + size) > LUAI_MAXCSTACK) {
     return 0;  /* Stack overflow. */
@@ -92,13 +92,13 @@ LUA_API int lua_checkstack(lua_State *L, int size)
   return 1;
 }
 
-LUALIB_API void luaL_checkstack(lua_State *L, int size, const char *msg)
+LUALIB_API void luaL_checkstack_hack(lua_State *L, int size, const char *msg)
 {
-  if (!lua_checkstack(L, size))
+  if (!lua_checkstack_hack(L, size))
     lj_err_callerv(L, LJ_ERR_STKOVM, msg);
 }
 
-LUA_API void lua_xmove(lua_State *from, lua_State *to, int n)
+LUA_API void lua_xmove_hack(lua_State *from, lua_State *to, int n)
 {
   TValue *f, *t;
   if (from == to) return;
@@ -113,12 +113,12 @@ LUA_API void lua_xmove(lua_State *from, lua_State *to, int n)
 
 /* -- Stack manipulation -------------------------------------------------- */
 
-LUA_API int lua_gettop(lua_State *L)
+LUA_API int lua_gettop_hack(lua_State *L)
 {
   return (int)(L->top - L->base);
 }
 
-LUA_API void lua_settop(lua_State *L, int idx)
+LUA_API void lua_settop_hack(lua_State *L, int idx)
 {
   if (idx >= 0) {
     api_check(L, idx <= tvref(L->maxstack) - L->base);
@@ -135,7 +135,7 @@ LUA_API void lua_settop(lua_State *L, int idx)
   }
 }
 
-LUA_API void lua_remove(lua_State *L, int idx)
+LUA_API void lua_remove_hack(lua_State *L, int idx)
 {
   TValue *p = stkindex2adr(L, idx);
   api_checkvalidindex(L, p);
@@ -143,7 +143,7 @@ LUA_API void lua_remove(lua_State *L, int idx)
   L->top--;
 }
 
-LUA_API void lua_insert(lua_State *L, int idx)
+LUA_API void lua_insert_hack(lua_State *L, int idx)
 {
   TValue *q, *p = stkindex2adr(L, idx);
   api_checkvalidindex(L, p);
@@ -151,7 +151,7 @@ LUA_API void lua_insert(lua_State *L, int idx)
   copyTV(L, p, L->top);
 }
 
-LUA_API void lua_replace(lua_State *L, int idx)
+LUA_API void lua_replace_hack(lua_State *L, int idx)
 {
   api_checknelems(L, 1);
   if (idx == LUA_GLOBALSINDEX) {
@@ -175,7 +175,7 @@ LUA_API void lua_replace(lua_State *L, int idx)
   L->top--;
 }
 
-LUA_API void lua_pushvalue(lua_State *L, int idx)
+LUA_API void lua_pushvalue_hack(lua_State *L, int idx)
 {
   copyTV(L, L->top, index2adr(L, idx));
   incr_top(L);
@@ -183,7 +183,7 @@ LUA_API void lua_pushvalue(lua_State *L, int idx)
 
 /* -- Stack getters ------------------------------------------------------- */
 
-LUA_API int lua_type(lua_State *L, int idx)
+LUA_API int lua_type_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   if (tvisnumber(o)) {
@@ -206,57 +206,57 @@ LUA_API int lua_type(lua_State *L, int idx)
   }
 }
 
-LUALIB_API void luaL_checktype(lua_State *L, int idx, int tt)
+LUALIB_API void luaL_checktype_hack(lua_State *L, int idx, int tt)
 {
-  if (lua_type(L, idx) != tt)
+  if (lua_type_hack(L, idx) != tt)
     lj_err_argt(L, idx, tt);
 }
 
-LUALIB_API void luaL_checkany(lua_State *L, int idx)
+LUALIB_API void luaL_checkany_hack(lua_State *L, int idx)
 {
   if (index2adr(L, idx) == niltv(L))
     lj_err_arg(L, idx, LJ_ERR_NOVAL);
 }
 
-LUA_API const char *lua_typename(lua_State *L, int t)
+LUA_API const char *lua_typename_hack(lua_State *L, int t)
 {
   UNUSED(L);
   return lj_obj_typename[t+1];
 }
 
-LUA_API int lua_iscfunction(lua_State *L, int idx)
+LUA_API int lua_iscfunction_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   return tvisfunc(o) && !isluafunc(funcV(o));
 }
 
-LUA_API int lua_isnumber(lua_State *L, int idx)
+LUA_API int lua_isnumber_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   TValue tmp;
   return (tvisnumber(o) || (tvisstr(o) && lj_strscan_number(strV(o), &tmp)));
 }
 
-LUA_API int lua_isstring(lua_State *L, int idx)
+LUA_API int lua_isstring_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   return (tvisstr(o) || tvisnumber(o));
 }
 
-LUA_API int lua_isuserdata(lua_State *L, int idx)
+LUA_API int lua_isuserdata_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   return (tvisudata(o) || tvislightud(o));
 }
 
-LUA_API int lua_rawequal(lua_State *L, int idx1, int idx2)
+LUA_API int lua_rawequal_hack(lua_State *L, int idx1, int idx2)
 {
   cTValue *o1 = index2adr(L, idx1);
   cTValue *o2 = index2adr(L, idx2);
   return (o1 == niltv(L) || o2 == niltv(L)) ? 0 : lj_obj_equal(o1, o2);
 }
 
-LUA_API int lua_equal(lua_State *L, int idx1, int idx2)
+LUA_API int lua_equal_hack(lua_State *L, int idx1, int idx2)
 {
   cTValue *o1 = index2adr(L, idx1);
   cTValue *o2 = index2adr(L, idx2);
@@ -289,7 +289,7 @@ LUA_API int lua_equal(lua_State *L, int idx1, int idx2)
   }
 }
 
-LUA_API int lua_lessthan(lua_State *L, int idx1, int idx2)
+LUA_API int lua_lessthan_hack(lua_State *L, int idx1, int idx2)
 {
   cTValue *o1 = index2adr(L, idx1);
   cTValue *o2 = index2adr(L, idx2);
@@ -312,7 +312,7 @@ LUA_API int lua_lessthan(lua_State *L, int idx1, int idx2)
   }
 }
 
-LUA_API lua_Number lua_tonumber(lua_State *L, int idx)
+LUA_API lua_Number lua_tonumber_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   TValue tmp;
@@ -324,7 +324,7 @@ LUA_API lua_Number lua_tonumber(lua_State *L, int idx)
     return 0;
 }
 
-LUALIB_API lua_Number luaL_checknumber(lua_State *L, int idx)
+LUALIB_API lua_Number luaL_checknumber_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   TValue tmp;
@@ -335,7 +335,7 @@ LUALIB_API lua_Number luaL_checknumber(lua_State *L, int idx)
   return numV(&tmp);
 }
 
-LUALIB_API lua_Number luaL_optnumber(lua_State *L, int idx, lua_Number def)
+LUALIB_API lua_Number luaL_optnumber_hack(lua_State *L, int idx, lua_Number def)
 {
   cTValue *o = index2adr(L, idx);
   TValue tmp;
@@ -348,7 +348,7 @@ LUALIB_API lua_Number luaL_optnumber(lua_State *L, int idx, lua_Number def)
   return numV(&tmp);
 }
 
-LUA_API lua_Integer lua_tointeger(lua_State *L, int idx)
+LUA_API lua_Integer lua_tointeger_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   TValue tmp;
@@ -371,7 +371,7 @@ LUA_API lua_Integer lua_tointeger(lua_State *L, int idx)
 #endif
 }
 
-LUALIB_API lua_Integer luaL_checkinteger(lua_State *L, int idx)
+LUALIB_API lua_Integer luaL_checkinteger_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   TValue tmp;
@@ -394,7 +394,7 @@ LUALIB_API lua_Integer luaL_checkinteger(lua_State *L, int idx)
 #endif
 }
 
-LUALIB_API lua_Integer luaL_optinteger(lua_State *L, int idx, lua_Integer def)
+LUALIB_API lua_Integer luaL_optinteger_hack(lua_State *L, int idx, lua_Integer def)
 {
   cTValue *o = index2adr(L, idx);
   TValue tmp;
@@ -419,13 +419,13 @@ LUALIB_API lua_Integer luaL_optinteger(lua_State *L, int idx, lua_Integer def)
 #endif
 }
 
-LUA_API int lua_toboolean(lua_State *L, int idx)
+LUA_API int lua_toboolean_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   return tvistruecond(o);
 }
 
-LUA_API const char *lua_tolstring(lua_State *L, int idx, size_t *len)
+LUA_API const char *lua_tolstring_hack(lua_State *L, int idx, size_t *len)
 {
   TValue *o = index2adr(L, idx);
   GCstr *s;
@@ -444,7 +444,7 @@ LUA_API const char *lua_tolstring(lua_State *L, int idx, size_t *len)
   return strdata(s);
 }
 
-LUALIB_API const char *luaL_checklstring(lua_State *L, int idx, size_t *len)
+LUALIB_API const char *luaL_checklstring_hack(lua_State *L, int idx, size_t *len)
 {
   TValue *o = index2adr(L, idx);
   GCstr *s;
@@ -462,7 +462,7 @@ LUALIB_API const char *luaL_checklstring(lua_State *L, int idx, size_t *len)
   return strdata(s);
 }
 
-LUALIB_API const char *luaL_optlstring(lua_State *L, int idx,
+LUALIB_API const char *luaL_optlstring_hack(lua_State *L, int idx,
 				       const char *def, size_t *len)
 {
   TValue *o = index2adr(L, idx);
@@ -484,11 +484,11 @@ LUALIB_API const char *luaL_optlstring(lua_State *L, int idx,
   return strdata(s);
 }
 
-LUALIB_API int luaL_checkoption(lua_State *L, int idx, const char *def,
+LUALIB_API int luaL_checkoption_hack(lua_State *L, int idx, const char *def,
 				const char *const lst[])
 {
   ptrdiff_t i;
-  const char *s = lua_tolstring(L, idx, NULL);
+  const char *s = lua_tolstring_hack(L, idx, NULL);
   if (s == NULL && (s = def) == NULL)
     lj_err_argt(L, idx, LUA_TSTRING);
   for (i = 0; lst[i]; i++)
@@ -497,7 +497,7 @@ LUALIB_API int luaL_checkoption(lua_State *L, int idx, const char *def,
   lj_err_argv(L, idx, LJ_ERR_INVOPTM, s);
 }
 
-LUA_API size_t lua_objlen(lua_State *L, int idx)
+LUA_API size_t lua_objlen_hack(lua_State *L, int idx)
 {
   TValue *o = index2adr(L, idx);
   if (tvisstr(o)) {
@@ -515,7 +515,7 @@ LUA_API size_t lua_objlen(lua_State *L, int idx)
   }
 }
 
-LUA_API lua_CFunction lua_tocfunction(lua_State *L, int idx)
+LUA_API lua_CFunction lua_tocfunction_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   if (tvisfunc(o)) {
@@ -526,7 +526,7 @@ LUA_API lua_CFunction lua_tocfunction(lua_State *L, int idx)
   return NULL;
 }
 
-LUA_API void *lua_touserdata(lua_State *L, int idx)
+LUA_API void *lua_touserdata_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   if (tvisudata(o))
@@ -537,13 +537,13 @@ LUA_API void *lua_touserdata(lua_State *L, int idx)
     return NULL;
 }
 
-LUA_API lua_State *lua_tothread(lua_State *L, int idx)
+LUA_API lua_State *lua_tothread_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   return (!tvisthread(o)) ? NULL : threadV(o);
 }
 
-LUA_API const void *lua_topointer(lua_State *L, int idx)
+LUA_API const void *lua_topointer_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   if (tvisudata(o))
@@ -560,13 +560,13 @@ LUA_API const void *lua_topointer(lua_State *L, int idx)
 
 /* -- Stack setters (object creation) ------------------------------------- */
 
-LUA_API void lua_pushnil(lua_State *L)
+LUA_API void lua_pushnil_hack(lua_State *L)
 {
   setnilV(L->top);
   incr_top(L);
 }
 
-LUA_API void lua_pushnumber(lua_State *L, lua_Number n)
+LUA_API void lua_pushnumber_hack(lua_State *L, lua_Number n)
 {
   setnumV(L->top, n);
   if (LJ_UNLIKELY(tvisnan(L->top)))
@@ -574,13 +574,13 @@ LUA_API void lua_pushnumber(lua_State *L, lua_Number n)
   incr_top(L);
 }
 
-LUA_API void lua_pushinteger(lua_State *L, lua_Integer n)
+LUA_API void lua_pushinteger_hack(lua_State *L, lua_Integer n)
 {
   setintptrV(L->top, n);
   incr_top(L);
 }
 
-LUA_API void lua_pushlstring(lua_State *L, const char *str, size_t len)
+LUA_API void lua_pushlstring_hack(lua_State *L, const char *str, size_t len)
 {
   GCstr *s;
   lj_gc_check(L);
@@ -589,7 +589,7 @@ LUA_API void lua_pushlstring(lua_State *L, const char *str, size_t len)
   incr_top(L);
 }
 
-LUA_API void lua_pushstring(lua_State *L, const char *str)
+LUA_API void lua_pushstring_hack(lua_State *L, const char *str)
 {
   if (str == NULL) {
     setnilV(L->top);
@@ -602,14 +602,14 @@ LUA_API void lua_pushstring(lua_State *L, const char *str)
   incr_top(L);
 }
 
-LUA_API const char *lua_pushvfstring(lua_State *L, const char *fmt,
+LUA_API const char *lua_pushvfstring_hack(lua_State *L, const char *fmt,
 				     va_list argp)
 {
   lj_gc_check(L);
   return lj_str_pushvf(L, fmt, argp);
 }
 
-LUA_API const char *lua_pushfstring(lua_State *L, const char *fmt, ...)
+LUA_API const char *lua_pushfstring_hack(lua_State *L, const char *fmt, ...)
 {
   const char *ret;
   va_list argp;
@@ -620,7 +620,7 @@ LUA_API const char *lua_pushfstring(lua_State *L, const char *fmt, ...)
   return ret;
 }
 
-LUA_API void lua_pushcclosure(lua_State *L, lua_CFunction f, int n)
+LUA_API void lua_pushcclosure_hack(lua_State *L, lua_CFunction f, int n)
 {
   GCfunc *fn;
   lj_gc_check(L);
@@ -635,19 +635,19 @@ LUA_API void lua_pushcclosure(lua_State *L, lua_CFunction f, int n)
   incr_top(L);
 }
 
-LUA_API void lua_pushboolean(lua_State *L, int b)
+LUA_API void lua_pushboolean_hack(lua_State *L, int b)
 {
   setboolV(L->top, (b != 0));
   incr_top(L);
 }
 
-LUA_API void lua_pushlightuserdata(lua_State *L, void *p)
+LUA_API void lua_pushlightuserdata_hack(lua_State *L, void *p)
 {
   setlightudV(L->top, checklightudptr(L, p));
   incr_top(L);
 }
 
-LUA_API void lua_createtable(lua_State *L, int narray, int nrec)
+LUA_API void lua_createtable_hack(lua_State *L, int narray, int nrec)
 {
   GCtab *t;
   lj_gc_check(L);
@@ -656,7 +656,7 @@ LUA_API void lua_createtable(lua_State *L, int narray, int nrec)
   incr_top(L);
 }
 
-LUALIB_API int luaL_newmetatable(lua_State *L, const char *tname)
+LUALIB_API int luaL_newmetatable_hack(lua_State *L, const char *tname)
 {
   GCtab *regt = tabV(registry(L));
   TValue *tv = lj_tab_setstr(L, regt, lj_str_newz(L, tname));
@@ -672,14 +672,14 @@ LUALIB_API int luaL_newmetatable(lua_State *L, const char *tname)
   }
 }
 
-LUA_API int lua_pushthread(lua_State *L)
+LUA_API int lua_pushthread_hack(lua_State *L)
 {
   setthreadV(L, L->top, L);
   incr_top(L);
   return (mainthread(G(L)) == L);
 }
 
-LUA_API lua_State *lua_newthread(lua_State *L)
+LUA_API lua_State *lua_newthread_hack(lua_State *L)
 {
   lua_State *L1;
   lj_gc_check(L);
@@ -689,7 +689,7 @@ LUA_API lua_State *lua_newthread(lua_State *L)
   return L1;
 }
 
-LUA_API void *lua_newuserdata(lua_State *L, size_t size)
+LUA_API void *lua_newuserdata_hack(lua_State *L, size_t size)
 {
   GCudata *ud;
   lj_gc_check(L);
@@ -701,7 +701,7 @@ LUA_API void *lua_newuserdata(lua_State *L, size_t size)
   return uddata(ud);
 }
 
-LUA_API void lua_concat(lua_State *L, int n)
+LUA_API void lua_concat_hack(lua_State *L, int n)
 {
   api_checknelems(L, n);
   if (n >= 2) {
@@ -727,7 +727,7 @@ LUA_API void lua_concat(lua_State *L, int n)
 
 /* -- Object getters ------------------------------------------------------ */
 
-LUA_API void lua_gettable(lua_State *L, int idx)
+LUA_API void lua_gettable_hack(lua_State *L, int idx)
 {
   cTValue *v, *t = index2adr(L, idx);
   api_checkvalidindex(L, t);
@@ -741,7 +741,7 @@ LUA_API void lua_gettable(lua_State *L, int idx)
   copyTV(L, L->top-1, v);
 }
 
-LUA_API void lua_getfield(lua_State *L, int idx, const char *k)
+LUA_API void lua_getfield_hack(lua_State *L, int idx, const char *k)
 {
   cTValue *v, *t = index2adr(L, idx);
   TValue key;
@@ -758,14 +758,14 @@ LUA_API void lua_getfield(lua_State *L, int idx, const char *k)
   incr_top(L);
 }
 
-LUA_API void lua_rawget(lua_State *L, int idx)
+LUA_API void lua_rawget_hack(lua_State *L, int idx)
 {
   cTValue *t = index2adr(L, idx);
   api_check(L, tvistab(t));
   copyTV(L, L->top-1, lj_tab_get(L, tabV(t), L->top-1));
 }
 
-LUA_API void lua_rawgeti(lua_State *L, int idx, int n)
+LUA_API void lua_rawgeti_hack(lua_State *L, int idx, int n)
 {
   cTValue *v, *t = index2adr(L, idx);
   api_check(L, tvistab(t));
@@ -778,7 +778,7 @@ LUA_API void lua_rawgeti(lua_State *L, int idx, int n)
   incr_top(L);
 }
 
-LUA_API int lua_getmetatable(lua_State *L, int idx)
+LUA_API int lua_getmetatable_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   GCtab *mt = NULL;
@@ -795,9 +795,9 @@ LUA_API int lua_getmetatable(lua_State *L, int idx)
   return 1;
 }
 
-LUALIB_API int luaL_getmetafield(lua_State *L, int idx, const char *field)
+LUALIB_API int luaL_getmetafield_hack(lua_State *L, int idx, const char *field)
 {
-  if (lua_getmetatable(L, idx)) {
+  if (lua_getmetatable_hack(L, idx)) {
     cTValue *tv = lj_tab_getstr(tabV(L->top-1), lj_str_newz(L, field));
     if (tv && !tvisnil(tv)) {
       copyTV(L, L->top-1, tv);
@@ -808,7 +808,7 @@ LUALIB_API int luaL_getmetafield(lua_State *L, int idx, const char *field)
   return 0;
 }
 
-LUA_API void lua_getfenv(lua_State *L, int idx)
+LUA_API void lua_getfenv_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   api_checkvalidindex(L, o);
@@ -824,7 +824,7 @@ LUA_API void lua_getfenv(lua_State *L, int idx)
   incr_top(L);
 }
 
-LUA_API int lua_next(lua_State *L, int idx)
+LUA_API int lua_next_hack(lua_State *L, int idx)
 {
   cTValue *t = index2adr(L, idx);
   int more;
@@ -838,7 +838,7 @@ LUA_API int lua_next(lua_State *L, int idx)
   return more;
 }
 
-LUA_API const char *lua_getupvalue(lua_State *L, int idx, int n)
+LUA_API const char *lua_getupvalue_hack(lua_State *L, int idx, int n)
 {
   TValue *val;
   const char *name = lj_debug_uvnamev(index2adr(L, idx), (uint32_t)(n-1), &val);
@@ -849,7 +849,7 @@ LUA_API const char *lua_getupvalue(lua_State *L, int idx, int n)
   return name;
 }
 
-LUA_API void *lua_upvalueid(lua_State *L, int idx, int n)
+LUA_API void *lua_upvalueid_hack(lua_State *L, int idx, int n)
 {
   GCfunc *fn = funcV(index2adr(L, idx));
   n--;
@@ -858,7 +858,7 @@ LUA_API void *lua_upvalueid(lua_State *L, int idx, int n)
 			 (void *)&fn->c.upvalue[n];
 }
 
-LUA_API void lua_upvaluejoin(lua_State *L, int idx1, int n1, int idx2, int n2)
+LUA_API void lua_upvaluejoin_hack(lua_State *L, int idx1, int n1, int idx2, int n2)
 {
   GCfunc *fn1 = funcV(index2adr(L, idx1));
   GCfunc *fn2 = funcV(index2adr(L, idx2));
@@ -869,7 +869,7 @@ LUA_API void lua_upvaluejoin(lua_State *L, int idx1, int n1, int idx2, int n2)
   lj_gc_objbarrier(L, fn1, gcref(fn1->l.uvptr[n1]));
 }
 
-LUALIB_API void *luaL_checkudata(lua_State *L, int idx, const char *tname)
+LUALIB_API void *luaL_checkudata_hack(lua_State *L, int idx, const char *tname)
 {
   cTValue *o = index2adr(L, idx);
   if (tvisudata(o)) {
@@ -884,7 +884,7 @@ LUALIB_API void *luaL_checkudata(lua_State *L, int idx, const char *tname)
 
 /* -- Object setters ------------------------------------------------------ */
 
-LUA_API void lua_settable(lua_State *L, int idx)
+LUA_API void lua_settable_hack(lua_State *L, int idx)
 {
   TValue *o;
   cTValue *t = index2adr(L, idx);
@@ -903,7 +903,7 @@ LUA_API void lua_settable(lua_State *L, int idx)
   }
 }
 
-LUA_API void lua_setfield(lua_State *L, int idx, const char *k)
+LUA_API void lua_setfield_hack(lua_State *L, int idx, const char *k)
 {
   TValue *o;
   TValue key;
@@ -924,7 +924,7 @@ LUA_API void lua_setfield(lua_State *L, int idx, const char *k)
   }
 }
 
-LUA_API void lua_rawset(lua_State *L, int idx)
+LUA_API void lua_rawset_hack(lua_State *L, int idx)
 {
   GCtab *t = tabV(index2adr(L, idx));
   TValue *dst, *key;
@@ -936,7 +936,7 @@ LUA_API void lua_rawset(lua_State *L, int idx)
   L->top = key;
 }
 
-LUA_API void lua_rawseti(lua_State *L, int idx, int n)
+LUA_API void lua_rawseti_hack(lua_State *L, int idx, int n)
 {
   GCtab *t = tabV(index2adr(L, idx));
   TValue *dst, *src;
@@ -948,7 +948,7 @@ LUA_API void lua_rawseti(lua_State *L, int idx, int n)
   L->top = src;
 }
 
-LUA_API int lua_setmetatable(lua_State *L, int idx)
+LUA_API int lua_setmetatable_hack(lua_State *L, int idx)
 {
   global_State *g;
   GCtab *mt;
@@ -987,7 +987,7 @@ LUA_API int lua_setmetatable(lua_State *L, int idx)
   return 1;
 }
 
-LUA_API int lua_setfenv(lua_State *L, int idx)
+LUA_API int lua_setfenv_hack(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
   GCtab *t;
@@ -1010,7 +1010,7 @@ LUA_API int lua_setfenv(lua_State *L, int idx)
   return 1;
 }
 
-LUA_API const char *lua_setupvalue(lua_State *L, int idx, int n)
+LUA_API const char *lua_setupvalue_hack(lua_State *L, int idx, int n)
 {
   cTValue *f = index2adr(L, idx);
   TValue *val;
@@ -1027,14 +1027,14 @@ LUA_API const char *lua_setupvalue(lua_State *L, int idx, int n)
 
 /* -- Calls --------------------------------------------------------------- */
 
-LUA_API void lua_call(lua_State *L, int nargs, int nresults)
+LUA_API void lua_call_hack(lua_State *L, int nargs, int nresults)
 {
   api_check(L, L->status == 0 || L->status == LUA_ERRERR);
   api_checknelems(L, nargs+1);
   lj_vm_call(L, L->top - nargs, nresults+1);
 }
 
-LUA_API int lua_pcall(lua_State *L, int nargs, int nresults, int errfunc)
+LUA_API int lua_pcall_hack(lua_State *L, int nargs, int nresults, int errfunc)
 {
   global_State *g = G(L);
   uint8_t oldh = hook_save(g);
@@ -1065,7 +1065,7 @@ static TValue *cpcall(lua_State *L, lua_CFunction func, void *ud)
   return L->top-1;  /* Now call the newly allocated C function. */
 }
 
-LUA_API int lua_cpcall(lua_State *L, lua_CFunction func, void *ud)
+LUA_API int lua_cpcall_hack(lua_State *L, lua_CFunction func, void *ud)
 {
   global_State *g = G(L);
   uint8_t oldh = hook_save(g);
@@ -1076,9 +1076,9 @@ LUA_API int lua_cpcall(lua_State *L, lua_CFunction func, void *ud)
   return status;
 }
 
-LUALIB_API int luaL_callmeta(lua_State *L, int idx, const char *field)
+LUALIB_API int luaL_callmeta_hack(lua_State *L, int idx, const char *field)
 {
-  if (luaL_getmetafield(L, idx, field)) {
+  if (luaL_getmetafield_hack(L, idx, field)) {
     TValue *base = L->top--;
     copyTV(L, base, index2adr(L, idx));
     L->top = base+1;
@@ -1090,7 +1090,7 @@ LUALIB_API int luaL_callmeta(lua_State *L, int idx, const char *field)
 
 /* -- Coroutine yield and resume ------------------------------------------ */
 
-LUA_API int lua_yield(lua_State *L, int nresults)
+LUA_API int lua_yield_hack(lua_State *L, int nresults)
 {
   void *cf = L->cframe;
   global_State *g = G(L);
@@ -1128,7 +1128,7 @@ LUA_API int lua_yield(lua_State *L, int nresults)
   return 0;  /* unreachable */
 }
 
-LUA_API int lua_resume(lua_State *L, int nargs)
+LUA_API int lua_resume_hack(lua_State *L, int nargs)
 {
   if (L->cframe == NULL && L->status <= LUA_YIELD)
     return lj_vm_resume(L, L->top - nargs, 0, 0);
@@ -1140,7 +1140,7 @@ LUA_API int lua_resume(lua_State *L, int nargs)
 
 /* -- GC and memory management -------------------------------------------- */
 
-LUA_API int lua_gc(lua_State *L, int what, int data)
+LUA_API int lua_gc_hack(lua_State *L, int what, int data)
 {
   global_State *g = G(L);
   int res = 0;
@@ -1184,14 +1184,14 @@ LUA_API int lua_gc(lua_State *L, int what, int data)
   return res;
 }
 
-LUA_API lua_Alloc lua_getallocf(lua_State *L, void **ud)
+LUA_API lua_Alloc lua_getallocf_hack(lua_State *L, void **ud)
 {
   global_State *g = G(L);
   if (ud) *ud = g->allocd;
   return g->allocf;
 }
 
-LUA_API void lua_setallocf(lua_State *L, lua_Alloc f, void *ud)
+LUA_API void lua_setallocf_hack(lua_State *L, lua_Alloc f, void *ud)
 {
   global_State *g = G(L);
   g->allocd = ud;

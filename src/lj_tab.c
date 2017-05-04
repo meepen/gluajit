@@ -132,7 +132,7 @@ static GCtab *newtab(lua_State *L, uint32_t asize, uint32_t hbits)
 
 /* Create a new table.
 **
-** IMPORTANT NOTE: The API differs from lua_createtable()!
+** IMPORTANT NOTE: The API differs from lua_createtable_hack()!
 **
 ** The array size is non-inclusive. E.g. asize=128 creates array slots
 ** for 0..127, but not for 128. If you need slots 1..128, pass asize=129

@@ -518,7 +518,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  // This can happen if:
   |  // - A C function grows the stack (a lot).
   |  // - The GC shrinks the stack in between.
-  |  // - A return back from a lua_call() with (high) nresults adjustment.
+  |  // - A return back from a lua_call_hack() with (high) nresults adjustment.
   |  mov L:RB->top, BASE		// Save current top held in BASE (yes).
   |  mov MULTRES, RD			// Need to fill only remainder with nil.
   |  mov FCARG2, RA

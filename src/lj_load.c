@@ -45,7 +45,7 @@ static TValue *cpparser(lua_State *L, lua_CFunction dummy, void *ud)
   return NULL;
 }
 
-LUA_API int lua_loadx(lua_State *L, lua_Reader reader, void *data,
+LUA_API int lua_loadx_hack(lua_State *L, lua_Reader reader, void *data,
 		      const char *chunkname, const char *mode)
 {
   LexState ls;
@@ -61,10 +61,10 @@ LUA_API int lua_loadx(lua_State *L, lua_Reader reader, void *data,
   return status;
 }
 
-LUA_API int lua_load(lua_State *L, lua_Reader reader, void *data,
+LUA_API int lua_load_hack(lua_State *L, lua_Reader reader, void *data,
 		     const char *chunkname)
 {
-  return lua_loadx(L, reader, data, chunkname, NULL);
+  return lua_loadx_hack(L, reader, data, chunkname, NULL);
 }
 
 typedef struct FileReaderCtx {
@@ -81,7 +81,7 @@ static const char *reader_file(lua_State *L, void *ud, size_t *size)
   return *size > 0 ? ctx->buf : NULL;
 }
 
-LUALIB_API int luaL_loadfilex(lua_State *L, const char *filename,
+LUALIB_API int luaL_loadfilex_hack(lua_State *L, const char *filename,
 			      const char *mode)
 {
   FileReaderCtx ctx;
@@ -90,18 +90,18 @@ LUALIB_API int luaL_loadfilex(lua_State *L, const char *filename,
   if (filename) {
     ctx.fp = fopen(filename, "rb");
     if (ctx.fp == NULL) {
-      lua_pushfstring(L, "cannot open %s: %s", filename, strerror(errno));
+      lua_pushfstring_hack(L, "cannot open %s: %s", filename, strerror(errno));
       return LUA_ERRFILE;
     }
-    chunkname = lua_pushfstring(L, "@%s", filename);
+    chunkname = lua_pushfstring_hack(L, "@%s", filename);
   } else {
     ctx.fp = stdin;
     chunkname = "=stdin";
   }
-  status = lua_loadx(L, reader_file, &ctx, chunkname, mode);
+  status = lua_loadx_hack(L, reader_file, &ctx, chunkname, mode);
   if (ferror(ctx.fp)) {
     L->top -= filename ? 2 : 1;
-    lua_pushfstring(L, "cannot read %s: %s", chunkname+1, strerror(errno));
+    lua_pushfstring_hack(L, "cannot read %s: %s", chunkname+1, strerror(errno));
     if (filename)
       fclose(ctx.fp);
     return LUA_ERRFILE;
@@ -114,9 +114,9 @@ LUALIB_API int luaL_loadfilex(lua_State *L, const char *filename,
   return status;
 }
 
-LUALIB_API int luaL_loadfile(lua_State *L, const char *filename)
+LUALIB_API int luaL_loadfile_hack(lua_State *L, const char *filename)
 {
-  return luaL_loadfilex(L, filename, NULL);
+  return luaL_loadfilex_hack(L, filename, NULL);
 }
 
 typedef struct StringReaderCtx {
@@ -134,29 +134,29 @@ static const char *reader_string(lua_State *L, void *ud, size_t *size)
   return ctx->str;
 }
 
-LUALIB_API int luaL_loadbufferx(lua_State *L, const char *buf, size_t size,
+LUALIB_API int luaL_loadbufferx_hack(lua_State *L, const char *buf, size_t size,
 				const char *name, const char *mode)
 {
   StringReaderCtx ctx;
   ctx.str = buf;
   ctx.size = size;
-  return lua_loadx(L, reader_string, &ctx, name, mode);
+  return lua_loadx_hack(L, reader_string, &ctx, name, mode);
 }
 
-LUALIB_API int luaL_loadbuffer(lua_State *L, const char *buf, size_t size,
+LUALIB_API int luaL_loadbuffer_hack(lua_State *L, const char *buf, size_t size,
 			       const char *name)
 {
-  return luaL_loadbufferx(L, buf, size, name, NULL);
+  return luaL_loadbufferx_hack(L, buf, size, name, NULL);
 }
 
-LUALIB_API int luaL_loadstring(lua_State *L, const char *s)
+LUALIB_API int luaL_loadstring_hack(lua_State *L, const char *s)
 {
-  return luaL_loadbuffer(L, s, strlen(s), s);
+  return luaL_loadbuffer_hack(L, s, strlen(s), s);
 }
 
 /* -- Dump bytecode ------------------------------------------------------- */
 
-LUA_API int lua_dump(lua_State *L, lua_Writer writer, void *data)
+LUA_API int lua_dump_hack(lua_State *L, lua_Writer writer, void *data)
 {
   cTValue *o = L->top-1;
   api_check(L, L->top > L->base);

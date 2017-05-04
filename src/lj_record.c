@@ -842,7 +842,7 @@ int lj_record_mm_lookup(jit_State *J, RecordIndex *ix, MMS mm)
     }
     mix.tab = emitir(IRT(IR_FLOAD, IRT_TAB), ix->tab, IRFL_UDATA_META);
   } else {
-    /* Specialize to base metatable. Must flush mcode in lua_setmetatable(). */
+    /* Specialize to base metatable. Must flush mcode in lua_setmetatable_hack(). */
     mt = tabref(basemt_obj(J2G(J), &ix->tabv));
     if (mt == NULL) {
       ix->mt = TREF_NIL;
@@ -2232,7 +2232,7 @@ void lj_record_setup(jit_State *J)
   ** Note this is only useful if hooks are *not* set most of the time.
   ** Use this only if you want to *asynchronously* interrupt the execution.
   **
-  ** You can set the instruction hook via lua_sethook() with a count of 1
+  ** You can set the instruction hook via lua_sethook_hack() with a count of 1
   ** from a signal handler or another native thread. Please have a look
   ** at the first few functions in luajit.c for an example (Ctrl-C handler).
   */

@@ -82,7 +82,7 @@ Temporary breakpoint 1, TRACE_1 () at x.lua:2
 3	end
 (gdb) bt
 #0  TRACE_1 () at x.lua:2
-#1  0x08053690 in lua_pcall [...]
+#1  0x08053690 in lua_pcall_hack [...]
 [...]
 #7  0x0806ff90 in main [...]
 (gdb) disass TRACE_1

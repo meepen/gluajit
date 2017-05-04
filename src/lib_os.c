@@ -39,9 +39,9 @@ LJLIB_CF(os_execute)
 #if LJ_TARGET_CONSOLE
 #if LJ_52
   errno = ENOSYS;
-  return luaL_fileresult(L, 0, NULL);
+  return luaL_fileresult_hack(L, 0, NULL);
 #else
-  lua_pushinteger(L, -1);
+  lua_pushinteger_hack(L, -1);
   return 1;
 #endif
 #else
@@ -49,7 +49,7 @@ LJLIB_CF(os_execute)
   int stat = system(cmd);
 #if LJ_52
   if (cmd)
-    return luaL_execresult(L, stat);
+    return luaL_execresult_hack(L, stat);
   setboolV(L->top++, 1);
 #else
   setintV(L->top++, stat);
@@ -61,14 +61,14 @@ LJLIB_CF(os_execute)
 LJLIB_CF(os_remove)
 {
   const char *filename = luaL_checkstring(L, 1);
-  return luaL_fileresult(L, remove(filename) == 0, filename);
+  return luaL_fileresult_hack(L, remove(filename) == 0, filename);
 }
 
 LJLIB_CF(os_rename)
 {
   const char *fromname = luaL_checkstring(L, 1);
   const char *toname = luaL_checkstring(L, 2);
-  return luaL_fileresult(L, rename(fromname, toname) == 0, fromname);
+  return luaL_fileresult_hack(L, rename(fromname, toname) == 0, fromname);
 }
 
 LJLIB_CF(os_tmpname)
@@ -91,7 +91,7 @@ LJLIB_CF(os_tmpname)
   if (tmpnam(buf) == NULL)
     lj_err_caller(L, LJ_ERR_OSUNIQF);
 #endif
-  lua_pushstring(L, buf);
+  lua_pushstring_hack(L, buf);
   return 1;
 #endif
 }
@@ -99,9 +99,9 @@ LJLIB_CF(os_tmpname)
 LJLIB_CF(os_getenv)
 {
 #if LJ_TARGET_CONSOLE
-  lua_pushnil(L);
+  lua_pushnil_hack(L);
 #else
-  lua_pushstring(L, getenv(luaL_checkstring(L, 1)));  /* if NULL push nil */
+  lua_pushstring_hack(L, getenv(luaL_checkstring(L, 1)));  /* if NULL push nil */
 #endif
   return 1;
 }
@@ -114,7 +114,7 @@ LJLIB_CF(os_exit)
   else
     status = lj_lib_optint(L, 1, EXIT_SUCCESS);
   if (L->base+1 < L->top && tvistruecond(L->base+1))
-    lua_close(L);
+    lua_close_hack(L);
   exit(status);
   return 0;  /* Unreachable. */
 }
@@ -129,23 +129,23 @@ LJLIB_CF(os_clock)
 
 static void setfield(lua_State *L, const char *key, int value)
 {
-  lua_pushinteger(L, value);
-  lua_setfield(L, -2, key);
+  lua_pushinteger_hack(L, value);
+  lua_setfield_hack(L, -2, key);
 }
 
 static void setboolfield(lua_State *L, const char *key, int value)
 {
   if (value < 0)  /* undefined? */
     return;  /* does not set field */
-  lua_pushboolean(L, value);
-  lua_setfield(L, -2, key);
+  lua_pushboolean_hack(L, value);
+  lua_setfield_hack(L, -2, key);
 }
 
 static int getboolfield(lua_State *L, const char *key)
 {
   int res;
-  lua_getfield(L, -1, key);
-  res = lua_isnil(L, -1) ? -1 : lua_toboolean(L, -1);
+  lua_getfield_hack(L, -1, key);
+  res = lua_isnil(L, -1) ? -1 : lua_toboolean_hack(L, -1);
   lua_pop(L, 1);
   return res;
 }
@@ -153,9 +153,9 @@ static int getboolfield(lua_State *L, const char *key)
 static int getfield(lua_State *L, const char *key, int d)
 {
   int res;
-  lua_getfield(L, -1, key);
-  if (lua_isnumber(L, -1)) {
-    res = (int)lua_tointeger(L, -1);
+  lua_getfield_hack(L, -1, key);
+  if (lua_isnumber_hack(L, -1)) {
+    res = (int)lua_tointeger_hack(L, -1);
   } else {
     if (d < 0)
       lj_err_callerv(L, LJ_ERR_OSDATEF, key);
@@ -168,7 +168,7 @@ static int getfield(lua_State *L, const char *key, int d)
 LJLIB_CF(os_date)
 {
   const char *s = luaL_optstring(L, 1, "%c");
-  time_t t = luaL_opt(L, (time_t)luaL_checknumber, 2, time(NULL));
+  time_t t = luaL_opt(L, (time_t)luaL_checknumber_hack, 2, time(NULL));
   struct tm *stm;
 #if LJ_TARGET_POSIX
   struct tm rtm;
@@ -190,7 +190,7 @@ LJLIB_CF(os_date)
   if (stm == NULL) {  /* Invalid date? */
     setnilV(L->top-1);
   } else if (strcmp(s, "*t") == 0) {
-    lua_createtable(L, 0, 9);  /* 9 = number of fields */
+    lua_createtable_hack(L, 0, 9);  /* 9 = number of fields */
     setfield(L, "sec", stm->tm_sec);
     setfield(L, "min", stm->tm_min);
     setfield(L, "hour", stm->tm_hour);
@@ -204,7 +204,7 @@ LJLIB_CF(os_date)
     char cc[3];
     luaL_Buffer b;
     cc[0] = '%'; cc[2] = '\0';
-    luaL_buffinit(L, &b);
+    luaL_buffinit_hack(L, &b);
     for (; *s; s++) {
       if (*s != '%' || *(s + 1) == '\0') {  /* No conversion specifier? */
 	luaL_addchar(&b, *s);
@@ -213,10 +213,10 @@ LJLIB_CF(os_date)
 	char buff[200];  /* Should be big enough for any conversion result. */
 	cc[1] = *(++s);
 	reslen = strftime(buff, sizeof(buff), cc, stm);
-	luaL_addlstring(&b, buff, reslen);
+	luaL_addlstring_hack(&b, buff, reslen);
       }
     }
-    luaL_pushresult(&b);
+    luaL_pushresult_hack(&b);
   }
   return 1;
 }
@@ -228,8 +228,8 @@ LJLIB_CF(os_time)
     t = time(NULL);  /* get current time */
   } else {
     struct tm ts;
-    luaL_checktype(L, 1, LUA_TTABLE);
-    lua_settop(L, 1);  /* make sure table is at the top */
+    luaL_checktype_hack(L, 1, LUA_TTABLE);
+    lua_settop_hack(L, 1);  /* make sure table is at the top */
     ts.tm_sec = getfield(L, "sec", 0);
     ts.tm_min = getfield(L, "min", 0);
     ts.tm_hour = getfield(L, "hour", 12);
@@ -240,16 +240,16 @@ LJLIB_CF(os_time)
     t = mktime(&ts);
   }
   if (t == (time_t)(-1))
-    lua_pushnil(L);
+    lua_pushnil_hack(L);
   else
-    lua_pushnumber(L, (lua_Number)t);
+    lua_pushnumber_hack(L, (lua_Number)t);
   return 1;
 }
 
 LJLIB_CF(os_difftime)
 {
-  lua_pushnumber(L, difftime((time_t)(luaL_checknumber(L, 1)),
-			     (time_t)(luaL_optnumber(L, 2, (lua_Number)0))));
+  lua_pushnumber_hack(L, difftime((time_t)(luaL_checknumber_hack(L, 1)),
+			     (time_t)(luaL_optnumber_hack(L, 2, (lua_Number)0))));
   return 1;
 }
 
@@ -270,7 +270,7 @@ LJLIB_CF(os_setlocale)
   else if (opt == 3) opt = LC_COLLATE;
   else if (opt == 4) opt = LC_MONETARY;
   else if (opt == 6) opt = LC_ALL;
-  lua_pushstring(L, setlocale(opt, str));
+  lua_pushstring_hack(L, setlocale(opt, str));
 #endif
   return 1;
 }
@@ -279,7 +279,7 @@ LJLIB_CF(os_setlocale)
 
 #include "lj_libdef.h"
 
-LUALIB_API int luaopen_os(lua_State *L)
+LUALIB_API int luaopen_os_hack(lua_State *L)
 {
   LJ_LIB_REG(L, LUA_OSLIBNAME, os);
   return 1;

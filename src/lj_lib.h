@@ -54,7 +54,7 @@ LJ_FUNC int lj_lib_checkopt(lua_State *L, int narg, int def, const char *lst);
 #if LJ_TARGET_WINDOWS
 #define lj_lib_checkfpu(L) \
   do { setnumV(L->top++, (lua_Number)1437217655); \
-    if (lua_tointeger(L, -1) != 1437217655) lj_err_caller(L, LJ_ERR_BADFPU); \
+    if (lua_tointeger_hack(L, -1) != 1437217655) lj_err_caller(L, LJ_ERR_BADFPU); \
     L->top--; } while (0)
 #else
 #define lj_lib_checkfpu(L)	UNUSED(L)
@@ -65,7 +65,7 @@ static LJ_AINLINE void lj_lib_pushcc(lua_State *L, lua_CFunction f,
 				     int id, int n)
 {
   GCfunc *fn;
-  lua_pushcclosure(L, f, n);
+  lua_pushcclosure_hack(L, f, n);
   fn = funcV(L->top-1);
   fn->c.ffid = (uint8_t)id;
   setmref(fn->c.pc, &G(L)->bc_cfunc_int);
