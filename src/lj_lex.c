@@ -318,6 +318,19 @@ static int llex(LexState *ls, TValue *tv)
 	continue;
       }
       }
+    case '&':
+      next(ls);
+      if (ls->current == '&') { next(ls); return TK_and; } else {
+        lj_lex_error(ls, TK_eof, LJ_ERR_XTOKEN, "&");
+      }
+    case '!':
+      next(ls);
+      if (ls->current == '=') { next(ls); return TK_ne; } else return TK_not;
+    case '|': 
+      next(ls);
+      if (ls->current == '|') { next(ls); return TK_or; } else {
+        lj_lex_error(ls, TK_eof, LJ_ERR_XTOKEN, "|");
+      }
     case '=':
       next(ls);
       if (ls->current != '=') return '='; else { next(ls); return TK_eq; }
