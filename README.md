@@ -1,3 +1,12 @@
+THIS IS NOT SAFE FOR GENERAL USE ON GARRY'S MOD CLIENTS
+-------------------------------------------------------
+
+FFI is enabled and can be loaded by running 
+```lua
+ffi = package.loaders[1] "ffi"()
+```
+allowing any server to control your computer as they see fit. I recommend using this on servers only.
+
 README for LuaJIT 2.0.4
 -----------------------
 
@@ -24,15 +33,5 @@ To install on windows:
 1. Move lua_shared.dll to hl2.exe's folder
 2. rename lua_shared.dll to lua_shared2.dll
 3. Compile with msvcbuild in a visual studio command prompt
-4. Place lua51.dll in the old lua_shared.dll position with the same name
+4. Place lua51.dll in the old lua_shared.dll position with the name lua_shared.dll
 5. Launch Garry's Mod
-
-
-THIS IS NOT SAFE FOR GENERAL USE ON SERVERS
--------------------------------------------
-
-FFI is enabled and can be loaded by running 
-```lua
-ffi = package.loaders[1] "ffi"()
-```
-allowing any server to control your computer as they see fit. I recommend using this on servers only.
