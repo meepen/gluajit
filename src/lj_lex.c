@@ -147,6 +147,30 @@ static int skip_sep(LexState *ls)
   return (ls->current == s) ? count : (-count) - 1;
 }
 
+static void scan_end_c_comment(LexState *ls)
+{
+  for (;;) {
+    switch (ls->current) {
+    case END_OF_STREAM:
+      lj_lex_error(ls, TK_eof, LJ_ERR_XLCOM);
+      break;
+    case '*':
+      next(ls);
+      if (ls->current == '/') { next(ls); return; }
+      break;
+    case '\n':
+    case '\r':
+      save(ls, '\n');
+      inclinenumber(ls);
+       lj_str_resetbuf(&ls->sb);  /* avoid wasting space */
+      break;
+    default:
+      next(ls);
+      break;
+    }
+  }
+}
+
 static void read_long_string(LexState *ls, TValue *tv, int sep)
 {
   save_and_next(ls);  /* skip 2nd `[' */
@@ -318,6 +342,15 @@ static int llex(LexState *ls, TValue *tv)
 	continue;
       }
       }
+    case '/': 
+      next(ls);
+      if (ls->current == '/') { 
+        while (!currIsNewline(ls) && ls->current != END_OF_STREAM)
+          next(ls);
+        continue;
+      }
+      else if (ls->current == '*') { next(ls); scan_end_c_comment(ls); continue; }
+      else return '/';
     case '&':
       next(ls);
       if (ls->current == '&') { next(ls); return TK_and; } else {
