@@ -188,7 +188,7 @@ LJLIB_CF(rawset)		LJLIB_REC(.)
   lj_lib_checktab(L, 1);
   lj_lib_checkany(L, 2);
   L->top = 1+lj_lib_checkany(L, 3);
-  lua_rawset_hack(L, 1);
+  lua_rawset(L, 1);
   return 1;
 }
 
@@ -222,7 +222,7 @@ LJLIB_CF(unpack)
 	      lj_lib_checkint(L, 3) : (int32_t)lj_tab_len(t);
   if (i > e) return 0;
   n = e - i + 1;
-  if (n <= 0 || !lua_checkstack_hack(L, n))
+  if (n <= 0 || !lua_checkstack(L, n))
     lj_err_caller(L, LJ_ERR_UNPACK);
   do {
     cTValue *tv = lj_tab_getint(t, i);
@@ -321,10 +321,10 @@ LJLIB_ASM(tostring)		LJLIB_REC(.)
       s = strV(lj_lib_upvalue(L, -(int32_t)itype(o)));
     } else {
       if (tvisfunc(o) && isffunc(funcV(o)))
-	lua_pushfstring_hack(L, "function: builtin#%d", funcV(o)->c.ffid);
+	lua_pushfstring(L, "function: builtin#%d", funcV(o)->c.ffid);
       else
-	lua_pushfstring_hack(L, "%s: %p", lj_typename(o), lua_topointer_hack(L, 1));
-      /* Note: lua_pushfstring_hack calls the GC which may invalidate o. */
+	lua_pushfstring(L, "%s: %p", lj_typename(o), lua_topointer(L, 1));
+      /* Note: lua_pushfstring calls the GC which may invalidate o. */
       s = strV(L->top-1);
     }
     setstrV(L, L->base-1, s);
@@ -337,13 +337,13 @@ LJLIB_ASM(tostring)		LJLIB_REC(.)
 LJLIB_CF(error)
 {
   int32_t level = lj_lib_optint(L, 2, 1);
-  lua_settop_hack(L, 1);
-  if (lua_isstring_hack(L, 1) && level > 0) {
-    luaL_where_hack(L, level);
-    lua_pushvalue_hack(L, 1);
-    lua_concat_hack(L, 2);
+  lua_settop(L, 1);
+  if (lua_isstring(L, 1) && level > 0) {
+    luaL_where(L, level);
+    lua_pushvalue(L, 1);
+    lua_concat(L, 2);
   }
-  return lua_error_hack(L);
+  return lua_error(L);
 }
 
 LJLIB_ASM(pcall)		LJLIB_REC(.)
@@ -377,8 +377,8 @@ LJLIB_CF(loadfile)
   GCstr *fname = lj_lib_optstr(L, 1);
   GCstr *mode = lj_lib_optstr(L, 2);
   int status;
-  lua_settop_hack(L, 3);  /* Ensure env arg exists. */
-  status = luaL_loadfilex_hack(L, fname ? strdata(fname) : NULL,
+  lua_settop(L, 3);  /* Ensure env arg exists. */
+  status = luaL_loadfilex(L, fname ? strdata(fname) : NULL,
 			  mode ? strdata(mode) : NULL);
   return load_aux(L, status, 3);
 }
@@ -386,16 +386,16 @@ LJLIB_CF(loadfile)
 static const char *reader_func(lua_State *L, void *ud, size_t *size)
 {
   UNUSED(ud);
-  luaL_checkstack_hack(L, 2, "too many nested functions");
+  luaL_checkstack(L, 2, "too many nested functions");
   copyTV(L, L->top++, L->base);
-  lua_call_hack(L, 0, 1);  /* Call user-supplied function. */
+  lua_call(L, 0, 1);  /* Call user-supplied function. */
   L->top--;
   if (tvisnil(L->top)) {
     *size = 0;
     return NULL;
   } else if (tvisstr(L->top) || tvisnumber(L->top)) {
     copyTV(L, L->base+4, L->top);  /* Anchor string in reserved stack slot. */
-    return lua_tolstring_hack(L, 5, size);
+    return lua_tolstring(L, 5, size);
   } else {
     lj_err_caller(L, LJ_ERR_RDRSTR);
     return NULL;
@@ -409,13 +409,13 @@ LJLIB_CF(load)
   int status;
   if (L->base < L->top && (tvisstr(L->base) || tvisnumber(L->base))) {
     GCstr *s = lj_lib_checkstr(L, 1);
-    lua_settop_hack(L, 4);  /* Ensure env arg exists. */
-    status = luaL_loadbufferx_hack(L, strdata(s), s->len, strdata(name ? name : s),
+    lua_settop(L, 4);  /* Ensure env arg exists. */
+    status = luaL_loadbufferx(L, strdata(s), s->len, strdata(name ? name : s),
 			      mode ? strdata(mode) : NULL);
   } else {
     lj_lib_checkfunc(L, 1);
-    lua_settop_hack(L, 5);  /* Reserve a slot for the string from the reader. */
-    status = lua_loadx_hack(L, reader_func, NULL, name ? strdata(name) : "=(load)",
+    lua_settop(L, 5);  /* Reserve a slot for the string from the reader. */
+    status = lua_loadx(L, reader_func, NULL, name ? strdata(name) : "=(load)",
 		       mode ? strdata(mode) : NULL);
   }
   return load_aux(L, status, 4);
@@ -431,9 +431,9 @@ LJLIB_CF(dofile)
   GCstr *fname = lj_lib_optstr(L, 1);
   setnilV(L->top);
   L->top = L->base+1;
-  if (luaL_loadfile_hack(L, fname ? strdata(fname) : NULL) != 0)
-    lua_error_hack(L);
-  lua_call_hack(L, 0, LUA_MULTRET);
+  if (luaL_loadfile(L, fname ? strdata(fname) : NULL) != 0)
+    lua_error(L);
+  lua_call(L, 0, LUA_MULTRET);
   return (int)(L->top - L->base) - 1;
 }
 
@@ -453,7 +453,7 @@ LJLIB_CF(collectgarbage)
   if (opt == LUA_GCCOUNT) {
     setnumV(L->top, (lua_Number)G(L)->gc.total/1024.0);
   } else {
-    int res = lua_gc_hack(L, opt, data);
+    int res = lua_gc(L, opt, data);
     if (opt == LUA_GCSTEP)
       setboolV(L->top, res);
     else
@@ -468,27 +468,27 @@ LJLIB_CF(collectgarbage)
 LJLIB_PUSH(top-2)  /* Upvalue holds weak table. */
 LJLIB_CF(newproxy)
 {
-  lua_settop_hack(L, 1);
-  lua_newuserdata_hack(L, 0);
-  if (lua_toboolean_hack(L, 1) == 0) {  /* newproxy(): without metatable. */
+  lua_settop(L, 1);
+  lua_newuserdata(L, 0);
+  if (lua_toboolean(L, 1) == 0) {  /* newproxy(): without metatable. */
     return 1;
   } else if (lua_isboolean(L, 1)) {  /* newproxy(true): with metatable. */
     lua_newtable(L);
-    lua_pushvalue_hack(L, -1);
-    lua_pushboolean_hack(L, 1);
-    lua_rawset_hack(L, lua_upvalueindex(1));  /* Remember mt in weak table. */
+    lua_pushvalue(L, -1);
+    lua_pushboolean(L, 1);
+    lua_rawset(L, lua_upvalueindex(1));  /* Remember mt in weak table. */
   } else {  /* newproxy(proxy): inherit metatable. */
     int validproxy = 0;
-    if (lua_getmetatable_hack(L, 1)) {
-      lua_rawget_hack(L, lua_upvalueindex(1));
-      validproxy = lua_toboolean_hack(L, -1);
+    if (lua_getmetatable(L, 1)) {
+      lua_rawget(L, lua_upvalueindex(1));
+      validproxy = lua_toboolean(L, -1);
       lua_pop(L, 1);
     }
     if (!validproxy)
       lj_err_arg(L, 1, LJ_ERR_NOPROXY);
-    lua_getmetatable_hack(L, 1);
+    lua_getmetatable(L, 1);
   }
-  lua_setmetatable_hack(L, 2);
+  lua_setmetatable(L, 2);
   return 1;
 }
 
@@ -502,7 +502,7 @@ LJLIB_CF(print)
     copyTV(L, L->top++, tv);
   } else {
     setstrV(L, L->top++, strV(lj_lib_upvalue(L, 1)));
-    lua_gettable_hack(L, LUA_GLOBALSINDEX);
+    lua_gettable(L, LUA_GLOBALSINDEX);
     tv = L->top-1;
   }
   shortcut = (tvisfunc(tv) && funcV(tv)->c.ffid == FF_tostring);
@@ -526,8 +526,8 @@ LJLIB_CF(print)
       copyTV(L, L->top+1, o);
       copyTV(L, L->top, L->top-1);
       L->top += 2;
-      lua_call_hack(L, 1, 1);
-      str = lua_tolstring_hack(L, -1, &size);
+      lua_call(L, 1, 1);
+      str = lua_tolstring(L, -1, &size);
       if (!str)
 	lj_err_caller(L, LJ_ERR_PRTOSTR);
       L->top--;
@@ -562,18 +562,18 @@ LJLIB_CF(coroutine_status)
   else if (co->base > tvref(co->stack)+1) s = "normal";
   else if (co->top == co->base) s = "dead";
   else s = "suspended";
-  lua_pushstring_hack(L, s);
+  lua_pushstring(L, s);
   return 1;
 }
 
 LJLIB_CF(coroutine_running)
 {
 #if LJ_52
-  int ismain = lua_pushthread_hack(L);
+  int ismain = lua_pushthread(L);
   setboolV(L->top++, ismain);
   return 2;
 #else
-  if (lua_pushthread_hack(L))
+  if (lua_pushthread(L))
     setnilV(L->top++);
   return 1;
 #endif
@@ -584,7 +584,7 @@ LJLIB_CF(coroutine_create)
   lua_State *L1;
   if (!(L->base < L->top && tvisfunc(L->base)))
     lj_err_argt(L, 1, LUA_TFUNCTION);
-  L1 = lua_newthread_hack(L);
+  L1 = lua_newthread(L);
   setfuncV(L, L1->top++, funcV(L->base));
   return 1;
 }
@@ -670,7 +670,7 @@ static void newproxy_weaktable(lua_State *L)
   t->nomm = (uint8_t)(~(1u<<MM_mode));
 }
 
-LUALIB_API int luaopen_base_hack(lua_State *L)
+LUALIB_API int luaopen_base(lua_State *L)
 {
   /* NOBARRIER: Table and value are the same. */
   GCtab *env = tabref(L->env);

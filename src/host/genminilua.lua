@@ -61,21 +61,21 @@ local CUSTOM_MAIN = [[
 typedef unsigned int UB;
 static UB barg(lua_State *L,int idx){
 union{lua_Number n;U64 b;}bn;
-bn.n=lua_tonumber_hack(L,idx)+6755399441055744.0;
-if (bn.n==0.0&&!lua_isnumber_hack(L,idx))luaL_typerror_hack(L,idx,"number");
+bn.n=lua_tonumber(L,idx)+6755399441055744.0;
+if (bn.n==0.0&&!lua_isnumber(L,idx))luaL_typerror(L,idx,"number");
 return(UB)bn.b;
 }
-#define BRET(b) lua_pushnumber_hack(L,(lua_Number)(int)(b));return 1;
+#define BRET(b) lua_pushnumber(L,(lua_Number)(int)(b));return 1;
 static int tobit(lua_State *L){
 BRET(barg(L,1))}
 static int bnot(lua_State *L){
 BRET(~barg(L,1))}
 static int band(lua_State *L){
-int i;UB b=barg(L,1);for(i=lua_gettop_hack(L);i>1;i--)b&=barg(L,i);BRET(b)}
+int i;UB b=barg(L,1);for(i=lua_gettop(L);i>1;i--)b&=barg(L,i);BRET(b)}
 static int bor(lua_State *L){
-int i;UB b=barg(L,1);for(i=lua_gettop_hack(L);i>1;i--)b|=barg(L,i);BRET(b)}
+int i;UB b=barg(L,1);for(i=lua_gettop(L);i>1;i--)b|=barg(L,i);BRET(b)}
 static int bxor(lua_State *L){
-int i;UB b=barg(L,1);for(i=lua_gettop_hack(L);i>1;i--)b^=barg(L,i);BRET(b)}
+int i;UB b=barg(L,1);for(i=lua_gettop(L);i>1;i--)b^=barg(L,i);BRET(b)}
 static int lshift(lua_State *L){
 UB b=barg(L,1),n=barg(L,2)&31;BRET(b<<n)}
 static int rshift(lua_State *L){
@@ -97,7 +97,7 @@ int i;
 if(n<0){n=-n;hexdigits="0123456789ABCDEF";}
 if(n>8)n=8;
 for(i=(int)n;--i>=0;){buf[i]=hexdigits[b&15];b>>=4;}
-lua_pushlstring_hack(L,buf,(size_t)n);
+lua_pushlstring(L,buf,(size_t)n);
 return 1;
 }
 static const struct luaL_Reg bitlib[] = {
@@ -116,25 +116,25 @@ static const struct luaL_Reg bitlib[] = {
 {NULL,NULL}
 };
 int main(int argc, char **argv){
-  lua_State *L = luaL_newstate_hack();
+  lua_State *L = luaL_newstate();
   int i;
-  luaL_openlibs_hack(L);
-  luaL_register_hack(L, "bit", bitlib);
+  luaL_openlibs(L);
+  luaL_register(L, "bit", bitlib);
   if (argc < 2) return sizeof(void *);
-  lua_createtable_hack(L, 0, 1);
-  lua_pushstring_hack(L, argv[1]);
-  lua_rawseti_hack(L, -2, 0);
+  lua_createtable(L, 0, 1);
+  lua_pushstring(L, argv[1]);
+  lua_rawseti(L, -2, 0);
   lua_setglobal(L, "arg");
-  if (luaL_loadfile_hack(L, argv[1]))
+  if (luaL_loadfile(L, argv[1]))
     goto err;
   for (i = 2; i < argc; i++)
-    lua_pushstring_hack(L, argv[i]);
-  if (lua_pcall_hack(L, argc - 2, 0, 0)) {
+    lua_pushstring(L, argv[i]);
+  if (lua_pcall(L, argc - 2, 0, 0)) {
   err:
     fprintf(stderr, "Error: %s\n", lua_tostring(L, -1));
     return 1;
   }
-  lua_close_hack(L);
+  lua_close(L);
   return 0;
 }
 ]]
@@ -291,7 +291,7 @@ local function strip_unused3(src)
   src = gsub(src, "trydecpoint%(ls,seminfo%)",
 		  "luaX_lexerror(ls,\"malformed number\",TK_NUMBER)")
   src = gsub(src, "int c=luaZ_lookahead%b();", "")
-  src = gsub(src, "luaL_register_hack%(L,[^,]*,co_funcs%);\nreturn 2;",
+  src = gsub(src, "luaL_register%(L,[^,]*,co_funcs%);\nreturn 2;",
 		  "return 1;")
   src = gsub(src, "getfuncname%b():", "NULL:")
   src = gsub(src, "getobjname%b():", "NULL:")

@@ -38,10 +38,7 @@ extern "C" __declspec(dllexport) __declspec(naked) void x() { \
 }
 
 #define IMPORT_INJECT(original, new) \
-const void * hackptr_##new = &new##_hack; \
-extern "C" __declspec(dllexport) __declspec(naked) void original() { \
-    __asm { jmp new##_hack } \
-} \
+const void * hackptr_##new = &new; \
 struct strux##original { \
     strux##original() { \
         DWORD trash; \

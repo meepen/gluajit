@@ -54,7 +54,7 @@ void lj_dispatch_init(GG_State *GG)
     disp[GG_LEN_DDISP+i] = disp[i] = makeasmfunc(lj_bc_ofs[i]);
   for (i = GG_LEN_SDISP; i < GG_LEN_DDISP; i++)
     disp[i] = makeasmfunc(lj_bc_ofs[i]);
-  /* The JIT engine is off by default. luaopen_jit_hack() turns it on. */
+  /* The JIT engine is off by default. luaopen_jit() turns it on. */
   disp[BC_FORL] = disp[BC_IFORL];
   disp[BC_ITERL] = disp[BC_IITERL];
   disp[BC_LOOP] = disp[BC_ILOOP];
@@ -220,7 +220,7 @@ static void setptmode_all(global_State *g, GCproto *pt, int mode)
 #endif
 
 /* Public API function: control the JIT engine. */
-int luaJIT_setmode_hack(lua_State *L, int idx, int mode)
+int luaJIT_setmode(lua_State *L, int idx, int mode)
 {
   global_State *g = G(L);
   int mm = mode & LUAJIT_MODE_MASK;
@@ -311,7 +311,7 @@ LUA_API void LUAJIT_VERSION_SYM(void)
 /* -- Hooks --------------------------------------------------------------- */
 
 /* This function can be called asynchronously (e.g. during a signal). */
-LUA_API int lua_sethook_hack(lua_State *L, lua_Hook func, int mask, int count)
+LUA_API int lua_sethook(lua_State *L, lua_Hook func, int mask, int count)
 {
   global_State *g = G(L);
   mask &= HOOK_EVENTMASK;
@@ -324,17 +324,17 @@ LUA_API int lua_sethook_hack(lua_State *L, lua_Hook func, int mask, int count)
   return 1;
 }
 
-LUA_API lua_Hook lua_gethook_hack(lua_State *L)
+LUA_API lua_Hook lua_gethook(lua_State *L)
 {
   return G(L)->hookf;
 }
 
-LUA_API int lua_gethookmask_hack(lua_State *L)
+LUA_API int lua_gethookmask(lua_State *L)
 {
   return G(L)->hookmask & HOOK_EVENTMASK;
 }
 
-LUA_API int lua_gethookcount_hack(lua_State *L)
+LUA_API int lua_gethookcount(lua_State *L)
 {
   return (int)G(L)->hookcstart;
 }
@@ -474,7 +474,7 @@ ASMFunction LJ_FASTCALL lj_dispatch_call(lua_State *L, const BCIns *pc)
     for (i = 0; i < missing; i++)  /* Add missing parameters. */
       setnilV(L->top++);
     callhook(L, LUA_HOOKCALL, -1);
-    /* Preserve modifications of missing parameters by lua_setlocal_hack(). */
+    /* Preserve modifications of missing parameters by lua_setlocal(). */
     while (missing-- > 0 && tvisnil(L->top - 1))
       L->top--;
   }

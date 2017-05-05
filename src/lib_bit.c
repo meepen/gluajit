@@ -58,7 +58,7 @@ LJLIB_CF(bit_tohex)
   if (n < 0) { n = -n; hexdigits = "0123456789ABCDEF"; }
   if (n > 8) n = 8;
   for (i = n; --i >= 0; ) { buf[i] = hexdigits[b & 15]; b >>= 4; }
-  lua_pushlstring_hack(L, buf, (size_t)n);
+  lua_pushlstring(L, buf, (size_t)n);
   return 1;
 }
 
@@ -66,7 +66,7 @@ LJLIB_CF(bit_tohex)
 
 #include "lj_libdef.h"
 
-LUALIB_API int luaopen_bit_hack(lua_State *L)
+LUALIB_API int luaopen_bit(lua_State *L)
 {
   LJ_LIB_REG(L, LUA_BITLIBNAME, bit);
   return 1;

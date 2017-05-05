@@ -16,16 +16,16 @@
 #include "lj_arch.h"
 
 static const luaL_Reg lj_lib_load[] = {
-  { "",			luaopen_base_hack },
-  { LUA_LOADLIBNAME,	luaopen_package_hack },
-  { LUA_TABLIBNAME,	luaopen_table_hack },
+  { "",			luaopen_base },
+  { LUA_LOADLIBNAME,	luaopen_package },
+  { LUA_TABLIBNAME,	luaopen_table },
   { LUA_IOLIBNAME,	luaopen_io },
-  { LUA_OSLIBNAME,	luaopen_os_hack },
-  { LUA_STRLIBNAME,	luaopen_string_hack },
-  { LUA_MATHLIBNAME,	luaopen_math_hack },
-  { LUA_DBLIBNAME,	luaopen_debug_hack },
-  { LUA_BITLIBNAME,	luaopen_bit_hack },
-  { LUA_JITLIBNAME,	luaopen_jit_hack },
+  { LUA_OSLIBNAME,	luaopen_os },
+  { LUA_STRLIBNAME,	luaopen_string },
+  { LUA_MATHLIBNAME,	luaopen_math },
+  { LUA_DBLIBNAME,	luaopen_debug },
+  { LUA_BITLIBNAME,	luaopen_bit },
+  { LUA_JITLIBNAME,	luaopen_jit },
   { NULL,		NULL }
 };
 
@@ -36,19 +36,19 @@ static const luaL_Reg lj_lib_preload[] = {
   { NULL,		NULL }
 };
 
-LUALIB_API void luaL_openlibs_hack(lua_State *L)
+LUALIB_API void luaL_openlibs(lua_State *L)
 {
   const luaL_Reg *lib;
   for (lib = lj_lib_load; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);
-    lua_pushstring_hack(L, lib->name);
-    lua_call_hack(L, 1, 0);
+    lua_pushstring(L, lib->name);
+    lua_call(L, 1, 0);
   }
-  luaL_findtable_hack(L, LUA_REGISTRYINDEX, "_PRELOAD",
+  luaL_findtable(L, LUA_REGISTRYINDEX, "_PRELOAD",
 		 sizeof(lj_lib_preload)/sizeof(lj_lib_preload[0])-1);
   for (lib = lj_lib_preload; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);
-    lua_setfield_hack(L, -2, lib->name);
+    lua_setfield(L, -2, lib->name);
   }
   lua_pop(L, 1);
 }

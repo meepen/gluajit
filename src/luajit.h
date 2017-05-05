@@ -32,11 +32,11 @@
 
 #define LUAJIT_VERSION		"LuaJIT 2.0.4"
 #define LUAJIT_VERSION_NUM	20004  /* Version 2.0.4 = 02.00.04. */
-#define LUAJIT_VERSION_SYM	luaJIT_version_2_0_4_hack
+#define LUAJIT_VERSION_SYM	luaJIT_version_2_0_4
 #define LUAJIT_COPYRIGHT	"Copyright (C) 2005-2015 Mike Pall"
 #define LUAJIT_URL		"http://luajit.org/"
 
-/* Modes for luaJIT_setmode_hack. */
+/* Modes for luaJIT_setmode. */
 #define LUAJIT_MODE_MASK	0x00ff
 
 enum {
@@ -62,7 +62,7 @@ enum {
 /* LuaJIT public C API. */
 
 /* Control the JIT engine. */
-LUA_API int luaJIT_setmode_hack(lua_State *L, int idx, int mode);
+LUA_API int luaJIT_setmode(lua_State *L, int idx, int mode);
 
 /* Enforce (dynamic) linker error for version mismatches. Call from main. */
 LUA_API void LUAJIT_VERSION_SYM(void);

@@ -144,7 +144,7 @@ LJLIB_ASM_(string_upper)
 
 static int writer_buf(lua_State *L, const void *p, size_t size, void *b)
 {
-  luaL_addlstring_hack((luaL_Buffer *)b, (const char *)p, size);
+  luaL_addlstring((luaL_Buffer *)b, (const char *)p, size);
   UNUSED(L);
   return 0;
 }
@@ -155,10 +155,10 @@ LJLIB_CF(string_dump)
   int strip = L->base+1 < L->top && tvistruecond(L->base+1);
   luaL_Buffer b;
   L->top = L->base+1;
-  luaL_buffinit_hack(L, &b);
+  luaL_buffinit(L, &b);
   if (!isluafunc(fn) || lj_bcwrite(L, funcproto(fn), writer_buf, &b, strip))
     lj_err_caller(L, LJ_ERR_STRDUMP);
-  luaL_pushresult_hack(&b);
+  luaL_pushresult(&b);
   return 1;
 }
 
@@ -478,16 +478,16 @@ static void push_onecapture(MatchState *ms, int i, const char *s, const char *e)
 {
   if (i >= ms->level) {
     if (i == 0)  /* ms->level == 0, too */
-      lua_pushlstring_hack(ms->L, s, (size_t)(e - s));  /* add whole match */
+      lua_pushlstring(ms->L, s, (size_t)(e - s));  /* add whole match */
     else
       lj_err_caller(ms->L, LJ_ERR_STRCAPI);
   } else {
     ptrdiff_t l = ms->capture[i].len;
     if (l == CAP_UNFINISHED) lj_err_caller(ms->L, LJ_ERR_STRCAPU);
     if (l == CAP_POSITION)
-      lua_pushinteger_hack(ms->L, ms->capture[i].init - ms->src_init + 1);
+      lua_pushinteger(ms->L, ms->capture[i].init - ms->src_init + 1);
     else
-      lua_pushlstring_hack(ms->L, ms->capture[i].init, (size_t)l);
+      lua_pushlstring(ms->L, ms->capture[i].init, (size_t)l);
   }
 }
 
@@ -495,7 +495,7 @@ static int push_captures(MatchState *ms, const char *s, const char *e)
 {
   int i;
   int nlevels = (ms->level == 0 && s) ? 1 : ms->level;
-  luaL_checkstack_hack(ms->L, nlevels, "too many captures");
+  luaL_checkstack(ms->L, nlevels, "too many captures");
   for (i = 0; i < nlevels; i++)
     push_onecapture(ms, i, s, e);
   return nlevels;  /* number of strings pushed */
@@ -511,9 +511,9 @@ static ptrdiff_t posrelat(ptrdiff_t pos, size_t len)
 static int str_find_aux(lua_State *L, int find)
 {
   size_t l1, l2;
-  const char *s = luaL_checklstring_hack(L, 1, &l1);
-  const char *p = luaL_checklstring_hack(L, 2, &l2);
-  ptrdiff_t init = posrelat(luaL_optinteger_hack(L, 3, 1), l1) - 1;
+  const char *s = luaL_checklstring(L, 1, &l1);
+  const char *p = luaL_checklstring(L, 2, &l2);
+  ptrdiff_t init = posrelat(luaL_optinteger(L, 3, 1), l1) - 1;
   if (init < 0) {
     init = 0;
   } else if ((size_t)(init) > l1) {
@@ -524,13 +524,13 @@ static int str_find_aux(lua_State *L, int find)
     init = (ptrdiff_t)l1;
 #endif
   }
-  if (find && (lua_toboolean_hack(L, 4) ||  /* explicit request? */
+  if (find && (lua_toboolean(L, 4) ||  /* explicit request? */
       strpbrk(p, SPECIALS) == NULL)) {  /* or no special characters? */
     /* do a plain search */
     const char *s2 = lmemfind(s+init, l1-(size_t)init, p, l2);
     if (s2) {
-      lua_pushinteger_hack(L, s2-s+1);
-      lua_pushinteger_hack(L, s2-s+(ptrdiff_t)l2);
+      lua_pushinteger(L, s2-s+1);
+      lua_pushinteger(L, s2-s+(ptrdiff_t)l2);
       return 2;
     }
   } else {
@@ -545,8 +545,8 @@ static int str_find_aux(lua_State *L, int find)
       ms.level = ms.depth = 0;
       if ((res=match(&ms, s1, p)) != NULL) {
 	if (find) {
-	  lua_pushinteger_hack(L, s1-s+1);  /* start */
-	  lua_pushinteger_hack(L, res-s);   /* end */
+	  lua_pushinteger(L, s1-s+1);  /* start */
+	  lua_pushinteger(L, res-s);   /* end */
 	  return push_captures(&ms, NULL, 0) + 2;
 	} else {
 	  return push_captures(&ms, s1, res);
@@ -554,7 +554,7 @@ static int str_find_aux(lua_State *L, int find)
       }
     } while (s1++ < ms.src_end && !anchor);
   }
-  lua_pushnil_hack(L);  /* not found */
+  lua_pushnil(L);  /* not found */
   return 1;
 }
 
@@ -605,7 +605,7 @@ LJLIB_CF(string_gmatch)
 static void add_s(MatchState *ms, luaL_Buffer *b, const char *s, const char *e)
 {
   size_t l, i;
-  const char *news = lua_tolstring_hack(ms->L, 3, &l);
+  const char *news = lua_tolstring(ms->L, 3, &l);
   for (i = 0; i < l; i++) {
     if (news[i] != L_ESC) {
       luaL_addchar(b, news[i]);
@@ -614,10 +614,10 @@ static void add_s(MatchState *ms, luaL_Buffer *b, const char *s, const char *e)
       if (!lj_char_isdigit(uchar(news[i]))) {
 	luaL_addchar(b, news[i]);
       } else if (news[i] == '0') {
-	luaL_addlstring_hack(b, s, (size_t)(e - s));
+	luaL_addlstring(b, s, (size_t)(e - s));
       } else {
 	push_onecapture(ms, news[i] - '1', s, e);
-	luaL_addvalue_hack(b);  /* add capture to accumulated result */
+	luaL_addvalue(b);  /* add capture to accumulated result */
       }
     }
   }
@@ -627,7 +627,7 @@ static void add_value(MatchState *ms, luaL_Buffer *b,
 		      const char *s, const char *e)
 {
   lua_State *L = ms->L;
-  switch (lua_type_hack(L, 3)) {
+  switch (lua_type(L, 3)) {
     case LUA_TNUMBER:
     case LUA_TSTRING: {
       add_s(ms, b, s, e);
@@ -635,32 +635,32 @@ static void add_value(MatchState *ms, luaL_Buffer *b,
     }
     case LUA_TFUNCTION: {
       int n;
-      lua_pushvalue_hack(L, 3);
+      lua_pushvalue(L, 3);
       n = push_captures(ms, s, e);
-      lua_call_hack(L, n, 1);
+      lua_call(L, n, 1);
       break;
     }
     case LUA_TTABLE: {
       push_onecapture(ms, 0, s, e);
-      lua_gettable_hack(L, 3);
+      lua_gettable(L, 3);
       break;
     }
   }
-  if (!lua_toboolean_hack(L, -1)) {  /* nil or false? */
+  if (!lua_toboolean(L, -1)) {  /* nil or false? */
     lua_pop(L, 1);
-    lua_pushlstring_hack(L, s, (size_t)(e - s));  /* keep original text */
-  } else if (!lua_isstring_hack(L, -1)) {
+    lua_pushlstring(L, s, (size_t)(e - s));  /* keep original text */
+  } else if (!lua_isstring(L, -1)) {
     lj_err_callerv(L, LJ_ERR_STRGSRV, luaL_typename(L, -1));
   }
-  luaL_addvalue_hack(b);  /* add result to accumulator */
+  luaL_addvalue(b);  /* add result to accumulator */
 }
 
 LJLIB_CF(string_gsub)
 {
   size_t srcl;
-  const char *src = luaL_checklstring_hack(L, 1, &srcl);
+  const char *src = luaL_checklstring(L, 1, &srcl);
   const char *p = luaL_checkstring(L, 2);
-  int  tr = lua_type_hack(L, 3);
+  int  tr = lua_type(L, 3);
   int max_s = luaL_optint(L, 4, (int)(srcl+1));
   int anchor = (*p == '^') ? (p++, 1) : 0;
   int n = 0;
@@ -669,7 +669,7 @@ LJLIB_CF(string_gsub)
   if (!(tr == LUA_TNUMBER || tr == LUA_TSTRING ||
 	tr == LUA_TFUNCTION || tr == LUA_TTABLE))
     lj_err_arg(L, 3, LJ_ERR_NOSFT);
-  luaL_buffinit_hack(L, &b);
+  luaL_buffinit(L, &b);
   ms.L = L;
   ms.src_init = src;
   ms.src_end = src+srcl;
@@ -690,9 +690,9 @@ LJLIB_CF(string_gsub)
     if (anchor)
       break;
   }
-  luaL_addlstring_hack(&b, src, (size_t)(ms.src_end-src));
-  luaL_pushresult_hack(&b);
-  lua_pushinteger_hack(L, n);  /* number of substitutions */
+  luaL_addlstring(&b, src, (size_t)(ms.src_end-src));
+  luaL_pushresult(&b);
+  lua_pushinteger(L, n);  /* number of substitutions */
   return 2;
 }
 
@@ -809,7 +809,7 @@ static GCstr *meta_tostring(lua_State *L, int arg)
   if (!tvisnil(mo = lj_meta_lookup(L, o, MM_tostring))) {
     copyTV(L, L->top++, mo);
     copyTV(L, L->top++, o);
-    lua_call_hack(L, 1, 1);
+    lua_call(L, 1, 1);
     L->top--;
     if (tvisstr(L->top))
       return strV(L->top);
@@ -828,7 +828,7 @@ static GCstr *meta_tostring(lua_State *L, int arg)
     if (tvisfunc(o) && isffunc(funcV(o)))
       lj_str_pushf(L, "function: builtin#%d", funcV(o)->c.ffid);
     else
-      lj_str_pushf(L, "%s: %p", lj_typename(o), lua_topointer_hack(L, arg));
+      lj_str_pushf(L, "%s: %p", lj_typename(o), lua_topointer(L, arg));
     L->top--;
     return strV(L->top);
   }
@@ -841,7 +841,7 @@ LJLIB_CF(string_format)
   const char *strfrmt = strdata(fmt);
   const char *strfrmt_end = strfrmt + fmt->len;
   luaL_Buffer b;
-  luaL_buffinit_hack(L, &b);
+  luaL_buffinit(L, &b);
   while (strfrmt < strfrmt_end) {
     if (*strfrmt != L_ESC) {
       luaL_addchar(&b, *strfrmt++);
@@ -851,7 +851,7 @@ LJLIB_CF(string_format)
       char form[MAX_FMTSPEC];  /* to store the format (`%...') */
       char buff[MAX_FMTITEM];  /* to store the formatted item */
       if (++arg > top)
-	luaL_argerror_hack(L, arg, lj_obj_typename[0]);
+	luaL_argerror(L, arg, lj_obj_typename[0]);
       strfrmt = scanformat(L, strfrmt, form);
       switch (*strfrmt++) {
       case 'c':
@@ -890,8 +890,8 @@ LJLIB_CF(string_format)
 	addquoted(L, &b, arg);
 	continue;
       case 'p':
-	lj_str_pushf(L, "%p", lua_topointer_hack(L, arg));
-	luaL_addvalue_hack(&b);
+	lj_str_pushf(L, "%p", lua_topointer(L, arg));
+	luaL_addvalue(&b);
 	continue;
       case 's': {
 	GCstr *str = meta_tostring(L, arg);
@@ -899,7 +899,7 @@ LJLIB_CF(string_format)
 	  /* no precision and string is too long to be formatted;
 	     keep original string */
 	  setstrV(L, L->top++, str);
-	  luaL_addvalue_hack(&b);
+	  luaL_addvalue(&b);
 	  continue;
 	}
 	sprintf(buff, form, strdata(str));
@@ -909,10 +909,10 @@ LJLIB_CF(string_format)
 	lj_err_callerv(L, LJ_ERR_STRFMTO, *(strfrmt -1));
 	break;
       }
-      luaL_addlstring_hack(&b, buff, strlen(buff));
+      luaL_addlstring(&b, buff, strlen(buff));
     }
   }
-  luaL_pushresult_hack(&b);
+  luaL_pushresult(&b);
   return 1;
 }
 
@@ -920,14 +920,14 @@ LJLIB_CF(string_format)
 
 #include "lj_libdef.h"
 
-LUALIB_API int luaopen_string_hack(lua_State *L)
+LUALIB_API int luaopen_string(lua_State *L)
 {
   GCtab *mt;
   global_State *g;
   LJ_LIB_REG(L, LUA_STRLIBNAME, string);
 #if defined(LUA_COMPAT_GFIND) && !LJ_52
-  lua_getfield_hack(L, -1, "gmatch");
-  lua_setfield_hack(L, -2, "gfind");
+  lua_getfield(L, -1, "gmatch");
+  lua_setfield(L, -2, "gfind");
 #endif
   mt = lj_tab_new(L, 0, 1);
   /* NOBARRIER: basemt is a GC root. */

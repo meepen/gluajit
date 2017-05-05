@@ -51,7 +51,7 @@ static int setjitmode(lua_State *L, int mode)
     else
       mode |= LUAJIT_MODE_FUNC;
   }
-  if (luaJIT_setmode_hack(L, idx, mode) != 1) {
+  if (luaJIT_setmode(L, idx, mode) != 1) {
     if ((mode & LUAJIT_MODE_MASK) == LUAJIT_MODE_ENGINE)
       lj_err_caller(L, LJ_ERR_NOJIT);
   err:
@@ -75,7 +75,7 @@ LJLIB_CF(jit_flush)
 #if LJ_HASJIT
   if (L->base < L->top && tvisnumber(L->base)) {
     int traceno = lj_lib_checkint(L, 1);
-    luaJIT_setmode_hack(L, traceno, LUAJIT_MODE_FLUSH|LUAJIT_MODE_TRACE);
+    luaJIT_setmode(L, traceno, LUAJIT_MODE_FLUSH|LUAJIT_MODE_TRACE);
     return 0;
   }
 #endif
@@ -111,21 +111,21 @@ LJLIB_CF(jit_status)
 LJLIB_CF(jit_attach)
 {
 #ifdef LUAJIT_DISABLE_VMEVENT
-  luaL_error_hack(L, "vmevent API disabled");
+  luaL_error(L, "vmevent API disabled");
 #else
   GCfunc *fn = lj_lib_checkfunc(L, 1);
   GCstr *s = lj_lib_optstr(L, 2);
-  luaL_findtable_hack(L, LUA_REGISTRYINDEX, LJ_VMEVENTS_REGKEY, LJ_VMEVENTS_HSIZE);
+  luaL_findtable(L, LUA_REGISTRYINDEX, LJ_VMEVENTS_REGKEY, LJ_VMEVENTS_HSIZE);
   if (s) {  /* Attach to given event. */
     const uint8_t *p = (const uint8_t *)strdata(s);
     uint32_t h = s->len;
     while (*p) h = h ^ (lj_rol(h, 6) + *p++);
-    lua_pushvalue_hack(L, 1);
-    lua_rawseti_hack(L, -2, VMEVENT_HASHIDX(h));
+    lua_pushvalue(L, 1);
+    lua_rawseti(L, -2, VMEVENT_HASHIDX(h));
     G(L)->vmevmask = VMEVENT_NOCACHE;  /* Invalidate cache. */
   } else {  /* Detach if no event given. */
     setnilV(L->top++);
-    while (lua_next_hack(L, -2)) {
+    while (lua_next(L, -2)) {
       L->top--;
       if (tvisfunc(L->top) && funcV(L->top) == fn) {
 	setnilV(lj_tab_set(L, tabV(L->top-2), L->top-1));
@@ -179,7 +179,7 @@ LJLIB_CF(jit_util_funcinfo)
   if (pt) {
     BCPos pc = (BCPos)lj_lib_optint(L, 2, 0);
     GCtab *t;
-    lua_createtable_hack(L, 0, 16);  /* Increment hash size if fields are added. */
+    lua_createtable(L, 0, 16);  /* Increment hash size if fields are added. */
     t = tabV(L->top-1);
     setintfield(L, t, "linedefined", pt->firstline);
     setintfield(L, t, "lastlinedefined", pt->firstline + pt->numline);
@@ -191,18 +191,18 @@ LJLIB_CF(jit_util_funcinfo)
     setintfield(L, t, "upvalues", (int32_t)pt->sizeuv);
     if (pc < pt->sizebc)
       setintfield(L, t, "currentline", lj_debug_line(pt, pc));
-    lua_pushboolean_hack(L, (pt->flags & PROTO_VARARG));
-    lua_setfield_hack(L, -2, "isvararg");
-    lua_pushboolean_hack(L, (pt->flags & PROTO_CHILD));
-    lua_setfield_hack(L, -2, "children");
+    lua_pushboolean(L, (pt->flags & PROTO_VARARG));
+    lua_setfield(L, -2, "isvararg");
+    lua_pushboolean(L, (pt->flags & PROTO_CHILD));
+    lua_setfield(L, -2, "children");
     setstrV(L, L->top++, proto_chunkname(pt));
-    lua_setfield_hack(L, -2, "source");
+    lua_setfield(L, -2, "source");
     lj_debug_pushloc(L, pt, pc);
-    lua_setfield_hack(L, -2, "loc");
+    lua_setfield(L, -2, "loc");
   } else {
     GCfunc *fn = funcV(L->base);
     GCtab *t;
-    lua_createtable_hack(L, 0, 4);  /* Increment hash size if fields are added. */
+    lua_createtable(L, 0, 4);  /* Increment hash size if fields are added. */
     t = tabV(L->top-1);
     if (!iscfunc(fn))
       setintfield(L, t, "ffid", fn->c.ffid);
@@ -288,14 +288,14 @@ LJLIB_CF(jit_util_traceinfo)
   GCtrace *T = jit_checktrace(L);
   if (T) {
     GCtab *t;
-    lua_createtable_hack(L, 0, 8);  /* Increment hash size if fields are added. */
+    lua_createtable(L, 0, 8);  /* Increment hash size if fields are added. */
     t = tabV(L->top-1);
     setintfield(L, t, "nins", (int32_t)T->nins - REF_BIAS - 1);
     setintfield(L, t, "nk", REF_BIAS - (int32_t)T->nk);
     setintfield(L, t, "link", T->link);
     setintfield(L, t, "nexit", T->nsnap);
     setstrV(L, L->top++, lj_str_newz(L, jit_trlinkname[T->linktype]));
-    lua_setfield_hack(L, -2, "linktype");
+    lua_setfield(L, -2, "linktype");
     /* There are many more fields. Add them only when needed. */
     return 1;
   }
@@ -352,7 +352,7 @@ LJLIB_CF(jit_util_tracesnap)
     SnapEntry *map = &T->snapmap[snap->mapofs];
     MSize n, nent = snap->nent;
     GCtab *t;
-    lua_createtable_hack(L, nent+2, 0);
+    lua_createtable(L, nent+2, 0);
     t = tabV(L->top-1);
     setintV(lj_tab_setint(L, t, 0), (int32_t)snap->ref - REF_BIAS);
     setintV(lj_tab_setint(L, t, 1), (int32_t)snap->nslots);
@@ -564,11 +564,11 @@ static uint32_t jit_cpudetect(lua_State *L)
 #if LJ_TARGET_X86
 #if !defined(LUAJIT_CPU_NOCMOV)
   if (!(flags & JIT_F_CMOV))
-    luaL_error_hack(L, "CPU not supported");
+    luaL_error(L, "CPU not supported");
 #endif
 #if defined(LUAJIT_CPU_SSE2)
   if (!(flags & JIT_F_SSE2))
-    luaL_error_hack(L, "CPU does not support SSE2 (recompile without -DLUAJIT_CPU_SSE2)");
+    luaL_error(L, "CPU does not support SSE2 (recompile without -DLUAJIT_CPU_SSE2)");
 #endif
 #endif
 #elif LJ_TARGET_ARM
@@ -643,11 +643,11 @@ static void jit_init(lua_State *L)
 #endif
 }
 
-LUALIB_API int luaopen_jit_hack(lua_State *L)
+LUALIB_API int luaopen_jit(lua_State *L)
 {
   lua_pushliteral(L, LJ_OS_NAME);
   lua_pushliteral(L, LJ_ARCH_NAME);
-  lua_pushinteger_hack(L, LUAJIT_VERSION_NUM);
+  lua_pushinteger(L, LUAJIT_VERSION_NUM);
   lua_pushliteral(L, LUAJIT_VERSION);
   LJ_LIB_REG(L, LUA_JITLIBNAME, jit);
 #ifndef LUAJIT_DISABLE_JITUTIL
