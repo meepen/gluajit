@@ -44,7 +44,7 @@ struct strux##original { \
         DWORD trash; \
         DWORD lpflOldProtect; \
         printf("%s\n", #original); \
-        void * real = 0; \
+        void *real = 0; \
         if (!real) { \
             if (!RealLuaShared) \
                 RealLuaShared = LoadLibraryA("lua_shared2.dll"); \
@@ -59,6 +59,29 @@ struct strux##original { \
     } \
 }; \
 static strux##original construct_##original;
+
+#define INITIALIZER(name, def) \
+struct init##name { \
+    init##name() def \
+}; \
+static init##name initialier_##name;
+
+const int libopen_base_offset1 = 0x61, libopen_base_offset2 = 0x66;
+
+extern "C" void *lj_lib_cf_gmod_base = 0, *lj_lib_init_gmod_base = 0;
+INITIALIZER(libopen_base, {
+    if (!RealLuaShared)
+        RealLuaShared = LoadLibraryA("lua_shared2.dll");
+    void *real_lob = GetProcAddress(RealLuaShared, "luaopen_base");
+
+    char *push_addresses = libopen_base_offset1 + (char *)real_lob;
+    // assert(push_addresses[0] == 0x68) // push offset 
+    lj_lib_cf_gmod_base = *(void **)&push_addresses[1];
+
+    push_addresses = libopen_base_offset2 + (char *)real_lob;
+    // assert(push_addresses[0] == 0x68) // push offset 
+    lj_lib_init_gmod_base = *(void **)&push_addresses[1];
+})
 
 #elif defined(__linux__)
 
