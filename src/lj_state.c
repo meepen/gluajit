@@ -261,6 +261,8 @@ LUA_API void lua_close_hack(lua_State *L)
 lua_State *lj_state_new(lua_State *L)
 {
   lua_State *L1 = lj_mem_newobj(L, lua_State);
+  // garrysmod:
+  memcpy(&L1->_GARRY_VARS, &L->_GARRY_VARS, sizeof L->_GARRY_VARS);
   L1->gct = ~LJ_TTHREAD;
   L1->dummy_ffid = FF_C;
   L1->status = 0;
