@@ -680,8 +680,6 @@ LUALIB_API int luaopen_base(lua_State *L)
   settabV(L, lj_tab_setstr(L, env, lj_str_newlit(L, "_G")), env);
   lua_pushliteral(L, LUA_VERSION);  /* top-3. */
   newproxy_weaktable(L);  /* top-2. */
-  printf("%p\n%p\n", lj_lib_init_gmod_base, lj_lib_cf_gmod_base);
-  __asm int 3;
   LJ_LIB_REG(L, "_G", base);
   LJ_LIB_REG(L, "_G", gmod_base);
   LJ_LIB_REG(L, LUA_COLIBNAME, coroutine);
