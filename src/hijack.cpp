@@ -18,6 +18,8 @@ extern "C" {
 
 
 #ifdef LUA_BUILD_AS_DLL
+#ifdef _WIN32
+
 #include <Windows.h>
 
 HMODULE RealLuaShared = 0;
@@ -60,6 +62,16 @@ struct strux##original { \
     } \
 }; \
 static strux##original construct_##original;
+
+#elif defined(__linux__)
+
+#error "linux not supported (yet)"
+
+#else
+
+#error "probably not coming to this os sorry"
+
+#endif
 
 // FF 25 xx xx xx xx = jmp dword ptr [xxxxxxxx]
 #else
