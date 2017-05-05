@@ -101,7 +101,7 @@ lua_rawset
 lua_rawseti
 lua_remove
 lua_replace
-lua_resume_real
+lua_resume_real_real
 lua_setallocf
 lua_setfenv
 lua_setfield

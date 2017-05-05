@@ -1128,7 +1128,7 @@ LUA_API int lua_yield(lua_State *L, int nresults)
   return 0;  /* unreachable */
 }
 
-LUA_API int lua_resume(lua_State *L, int nargs)
+LUA_API int lua_resume_real(lua_State *L, int nargs)
 {
   if (L->cframe == NULL && L->status <= LUA_YIELD)
     return lj_vm_resume(L, L->top - nargs, 0, 0);
