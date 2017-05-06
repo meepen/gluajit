@@ -1,0 +1,25 @@
+# Ignored compiled / generated file extensions
+**.so
+**.o
+**.a
+**.s
+**.swp
+**.dll
+**.exp
+**.lib
+**.pdb
+**.exe
+
+# Ignore compiled binaries
+src/host/buildvm
+src/host/minilua
+
+# Ignore auto-generated headers
+src/host/buildvm_arch.h
+src/jit/vmdef.lua
+src/lj_bcdef.h
+src/lj_ffdef.h
+src/lj_folddef.h
+src/lj_libdef.h
+src/lj_recdef.h
+src/Makefile.dep
