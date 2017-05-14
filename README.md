@@ -39,5 +39,5 @@ To install on windows:
 
 To compile & install on linux:
 
-1. run `make depend` in src/ to update Makefile.dep
+1. Run `make CXFLAGS=-DLUA_BUILD_AS_DLL depend` in src/ to update Makefile.dep
 2. (TODO)
