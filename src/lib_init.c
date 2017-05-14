@@ -36,8 +36,12 @@ static const luaL_Reg lj_lib_preload[] = {
   { NULL,		NULL }
 };
 
+#include "management.h"
+
 LUALIB_API void luaL_openlibs(lua_State *L)
 {
+  if (!hijack_LibOpen(L, LIBTYPE_ALL))
+    return;
   const luaL_Reg *lib;
   for (lib = lj_lib_load; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);

@@ -175,12 +175,24 @@ static void close_state(lua_State *L)
     g->allocf(g->allocd, G2GG(g), sizeof(GG_State), 0);
 }
 
+
+int ManagementCreationState = 0;
+#include "management.h"
+
 #if LJ_64 && !(defined(LUAJIT_USE_VALGRIND) && defined(LUAJIT_USE_SYSMALLOC))
 lua_State *lj_state_newstate(lua_Alloc f, void *ud)
 #else
 LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud)
 #endif
 {
+
+  if (!ManagementCreationState)
+  {
+    ManagementCreationState = 1;
+    hijack_CreateManagementState();
+    ManagementCreationState = 2;
+  }
+
   GG_State *GG = (GG_State *)f(ud, NULL, 0, sizeof(GG_State));
   lua_State *L = &GG->L;
   global_State *g = &GG->g;
@@ -218,6 +230,10 @@ LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud)
     return NULL;
   }
   L->status = 0;
+  if (ManagementCreationState == 2)
+  {
+    hijack_StateCreation(L);
+  }
   return L;
 }
 

@@ -827,8 +827,12 @@ static void ffi_register_module(lua_State *L)
   }
 }
 
+#include "management.h"
+
 LUALIB_API int luaopen_ffi(lua_State *L)
 {
+  if (!hijack_LibOpen(L, LIBTYPE_FFI))
+    return 0;
   CTState *cts = lj_ctype_init(L);
   settabV(L, L->top++, (cts->miscmap = lj_tab_new(L, 0, 1)));
   cts->finalizer = ffi_finalizer(L);

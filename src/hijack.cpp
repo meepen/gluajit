@@ -11,7 +11,12 @@ extern "C" {
 #include "lauxlib.h"
 #include "lualib.h"
 #include "lj_arch.h"
+#include "luaconf.h"
 }
+
+
+// Use here to include things automatically so we don't need to change the makefiles and build scripts
+#include "management.cpp"
 
 #define LUA_BUILD_AS_DLL
 
