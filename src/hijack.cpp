@@ -1,29 +1,88 @@
 
-#ifdef LUA_BUILD_AS_DLL
-#define WAS_BUILD_AS_DLL
-#undef LUA_BUILD_AS_DLL
+#ifndef LUA_BUILD_AS_DLL
+#error "only compatible with dll"
 #endif
 
+#undef LUA_BUILD_AS_DLL
 
 extern "C" {
 #include "lua.h"
 #include "luajit.h"
 #include "lauxlib.h"
 #include "lualib.h"
+#include "lj_arch.h"
 }
 
-#ifdef WAS_BUILD_AS_DLL
 #define LUA_BUILD_AS_DLL
+
+static void *ll_load(const char *path, int gl = 0);
+static void *ll_sym(void *lib, const char *sym);
+enum EProtection;
+static void ll_mprotect(void *addr, size_t size, EProtection prot);
+
+#if LJ_TARGET_WINDOWS
+#include <Windows.h>
+enum EProtection {
+    PROTECTION_READWRITE = PAGE_READWRITE,
+    PROTECTION_READEXEC  = PAGE_EXECUTE_READ
+};
+static void ll_mprotect(void *addr, size_t size, EProtection prot)
+{
+    DWORD lpflOldProtect;
+    VirtualProtect(addr, size, prot, &lpflOldProtect);
+}
+
+
+#elif LJ_TARGET_POSIX
+#include <sys/mman.h>
+enum EProtection {
+    PROTECTION_READWRITE = PROT_READ | PROT_WRITE,
+    PROTECTION_READEXEC  = PROT_READ | PROT_EXEC
+};
+static void ll_mprotect(void *addr, size_t size, EProtection prot)
+{
+    mprotect(addr, size, (int)prot);
+}
 #endif
 
 
-#ifdef LUA_BUILD_AS_DLL
-#ifdef _WIN32
 
-#include <Windows.h>
+#if LJ_TARGET_DLOPEN
+#include <dlfcn.h>
 
-HMODULE RealLuaShared = 0;
-HMODULE RealDetoured  = 0;
+static void *ll_load(const char *path, int gl)
+{
+  void *lib = dlopen(path, RTLD_NOW | (gl ? RTLD_GLOBAL : RTLD_LOCAL));
+  return lib;
+}
+
+static void *ll_sym(void *lib, const char *sym)
+{
+  void *f = (void *)dlsym(lib, sym);
+  return f;
+}
+
+#elif LJ_TARGET_WINDOWS
+
+
+static void *ll_load(const char *path, int gl)
+{
+  void *lib = (void *)LoadLibraryA(path);
+  return lib;
+}
+
+static void *ll_sym(void *lib, const char *sym)
+{
+  void *f = (void *)GetProcAddress((HINSTANCE)lib, sym);
+  return f;
+}
+
+#else
+#error "what os is this?"
+#endif
+
+void *RealLuaShared = 0;
+void *RealDetoured  = 0;
 
 #define MODULE_NAME "garrysmod/bin/lua_shared.dll"
 
@@ -33,8 +92,8 @@ extern "C" __declspec(dllexport) __declspec(naked) void x() { \
     __asm { pushad } \
     if (!real##x) { \
         if (!RealDetoured) \
-            RealDetoured = LoadLibraryA("real_datacache.dll"); \
-        real##x = GetProcAddress(RealDetoured, #x); \
+            RealDetoured = ll_load("real_datacache.dll", 0); \
+        real##x = ll_sym(RealDetoured, #x); \
     } \
     __asm { popad } \
     __asm { jmp real##x } \
@@ -44,20 +103,18 @@ extern "C" __declspec(dllexport) __declspec(naked) void x() { \
 const void * hackptr_##original = &original; \
 struct strux##original { \
     strux##original() { \
-        DWORD trash; \
-        DWORD lpflOldProtect; \
         printf("%s\n", #original); \
         void *real = 0; \
         if (!real) { \
             if (!RealLuaShared) \
-                RealLuaShared = LoadLibraryA(MODULE_NAME); \
-            real = GetProcAddress(RealLuaShared, #original); \
-            VirtualProtect(real, 7, PAGE_READWRITE, &lpflOldProtect); \
+                RealLuaShared = ll_load(MODULE_NAME); \
+            real = ll_sym(RealLuaShared, #original); \
+            ll_mprotect(real, 7, PROTECTION_READWRITE); \
             *(unsigned char *)real = 0x90; \
             *(1 + (unsigned char *)real) = 0xFF; \
             *(2 + (unsigned char *)real) = 0x25; \
             *(void ***)(3 + (unsigned char *)real) = (void **)&hackptr_##original; \
-            VirtualProtect(real, 7, lpflOldProtect, &trash); \
+            ll_mprotect(real, 7, PROTECTION_READEXEC); \
         } \
     } \
 }; \
@@ -72,10 +129,11 @@ static init##name initialier_##name;
 const int libopen_base_offset1 = 0x61, libopen_base_offset2 = 0x66;
 
 extern "C" void *lj_lib_cf_gmod_base = 0, *lj_lib_init_gmod_base = 0;
+#if LJ_TARGET_WINDOWS
 INITIALIZER(libopen_base, {
     if (!RealLuaShared)
-        RealLuaShared = LoadLibraryA(MODULE_NAME);
-    void *real_lob = GetProcAddress(RealLuaShared, "luaopen_base");
+        RealLuaShared = ll_load(MODULE_NAME);
+    void *real_lob = ll_sym(RealLuaShared, "luaopen_base");
 
     char *push_addresses = libopen_base_offset1 + (char *)real_lob;
     // assert(push_addresses[0] == 0x68) // push offset 
@@ -85,21 +143,11 @@ INITIALIZER(libopen_base, {
     // assert(push_addresses[0] == 0x68) // push offset 
     lj_lib_init_gmod_base = *(void **)&push_addresses[1];
 })
-
-#elif defined(__linux__)
-
-#error "linux not supported (yet)"
-
 #else
-
-#error "probably not coming to this os sorry"
-
+#error "need to do this os"
 #endif
 
 // FF 25 xx xx xx xx = jmp dword ptr [xxxxxxxx]
-#else
-#define IMPORT_INJECT(x)
-#endif
 
 REDIRECT(CreateInterface)
 IMPORT_INJECT(luaJIT_setmode)
