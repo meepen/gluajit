@@ -793,6 +793,7 @@ static void LJ_FASTCALL recff_table_insert(jit_State *J, RecordFFData *rd)
       lj_record_idx(J, &ix);  /* Set new value. */
     } else {  /* Complex case: insert in the middle. */
       recff_nyiu(J);
+      recff_c(J, rd);
     }
   }  /* else: Interpreter will throw. */
 }
