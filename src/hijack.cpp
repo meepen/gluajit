@@ -141,11 +141,11 @@ INITIALIZER(libopen_base, {
     void *real_lob = ll_sym(RealLuaShared, "luaopen_base");
 
     char *push_addresses = libopen_base_offset1 + (char *)real_lob;
-    // assert(push_addresses[0] == 0x68) // push offset 
+    // assert(push_addresses[0] == 0x68) // push offset
     lj_lib_cf_gmod_base = *(void **)&push_addresses[1];
 
     push_addresses = libopen_base_offset2 + (char *)real_lob;
-    // assert(push_addresses[0] == 0x68) // push offset 
+    // assert(push_addresses[0] == 0x68) // push offset
     lj_lib_init_gmod_base = *(void **)&push_addresses[1];
 })
 #else

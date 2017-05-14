@@ -1,7 +1,7 @@
 THIS IS NOT SAFE FOR GENERAL USE ON GARRY'S MOD CLIENTS
 -------------------------------------------------------
 
-FFI is enabled and can be loaded by running 
+FFI is enabled and can be loaded by running
 ```lua
 ffi = package.loaders[1] "ffi"()
 ```
@@ -35,3 +35,9 @@ To install on windows:
 3. Compile with msvcbuild in a visual studio command prompt
 4. Place lua51.dll in the old datacache(\_srv).dll position with the name datacache(\_srv).dll
 5. Launch Garry's Mod
+
+
+To compile & install on linux:
+
+1. run `make depend` in src/ to update Makefile.dep
+2. (TODO)

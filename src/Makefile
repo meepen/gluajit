@@ -579,7 +579,7 @@ depend:
 	@for file in $(ALL_HDRGEN); do \
 	  test -f $$file || touch $$file; \
 	  done
-	@$(HOST_CC) $(HOST_ACFLAGS) -MM *.c host/*.c | \
+	@$(HOST_CC) $(HOST_ACFLAGS) -MM *.c *.cpp host/*.c | \
 	  sed -e "s| [^ ]*/dasm_\S*\.h||g" \
 	      -e "s|^\([^l ]\)|host/\1|" \
 	      -e "s| lj_target_\S*\.h| lj_target_*.h|g" \
