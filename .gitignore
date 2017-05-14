@@ -22,5 +22,7 @@ src/lj_ffdef.h
 src/lj_folddef.h
 src/lj_libdef.h
 src/lj_recdef.h
-src/Makefile.dep
+
+# Ignore meeps shit
 reverse_engineering/bins/*
+
