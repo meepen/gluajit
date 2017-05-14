@@ -1,19 +1,18 @@
 
 #ifndef LUA_BUILD_AS_DLL
-#error "only compatible with dll"
+    #error "only compatible with dll"
 #endif
 
 #undef LUA_BUILD_AS_DLL
 
 extern "C" {
-#include "lua.h"
-#include "luajit.h"
-#include "lauxlib.h"
-#include "lualib.h"
-#include "lj_arch.h"
-#include "luaconf.h"
+    #include "lua.h"
+    #include "luajit.h"
+    #include "lauxlib.h"
+    #include "lualib.h"
+    #include "lj_arch.h"
+    #include "luaconf.h"
 }
-
 
 // Use here to include things automatically so we don't need to change the makefiles and build scripts
 #include "management.cpp"
@@ -26,64 +25,55 @@ enum EProtection;
 static void ll_mprotect(void *addr, size_t size, EProtection prot);
 
 #if LJ_TARGET_WINDOWS
-#include <Windows.h>
-enum EProtection {
-    PROTECTION_READWRITE = PAGE_READWRITE,
-    PROTECTION_READEXEC  = PAGE_EXECUTE_READ
-};
-static void ll_mprotect(void *addr, size_t size, EProtection prot)
-{
-    DWORD lpflOldProtect;
-    VirtualProtect(addr, size, prot, &lpflOldProtect);
-}
-
-
+    #include <Windows.h>
+    enum EProtection {
+        PROTECTION_READWRITE = PAGE_READWRITE,
+        PROTECTION_READEXEC  = PAGE_EXECUTE_READ
+    };
+    static void ll_mprotect(void *addr, size_t size, EProtection prot)
+    {
+        DWORD lpflOldProtect;
+        VirtualProtect(addr, size, prot, &lpflOldProtect);
+    }
 #elif LJ_TARGET_POSIX
-#include <sys/mman.h>
-enum EProtection {
-    PROTECTION_READWRITE = PROT_READ | PROT_WRITE,
-    PROTECTION_READEXEC  = PROT_READ | PROT_EXEC
-};
-static void ll_mprotect(void *addr, size_t size, EProtection prot)
-{
-    mprotect(addr, size, (int)prot);
-}
+    #include <sys/mman.h>
+    enum EProtection {
+        PROTECTION_READWRITE = PROT_READ | PROT_WRITE,
+        PROTECTION_READEXEC  = PROT_READ | PROT_EXEC
+    };
+    static void ll_mprotect(void *addr, size_t size, EProtection prot)
+    {
+        mprotect(addr, size, (int)prot);
+    }
 #endif
 
-
-
 #if LJ_TARGET_DLOPEN
-#include <dlfcn.h>
+    #include <dlfcn.h>
+    static void *ll_load(const char *path, int gl)
+    {
+      void *lib = dlopen(path, RTLD_NOW | (gl ? RTLD_GLOBAL : RTLD_LOCAL));
+      return lib;
+    }
 
-static void *ll_load(const char *path, int gl)
-{
-  void *lib = dlopen(path, RTLD_NOW | (gl ? RTLD_GLOBAL : RTLD_LOCAL));
-  return lib;
-}
-
-static void *ll_sym(void *lib, const char *sym)
-{
-  void *f = (void *)dlsym(lib, sym);
-  return f;
-}
-
+    static void *ll_sym(void *lib, const char *sym)
+    {
+      void *f = (void *)dlsym(lib, sym);
+      return f;
+    }
 #elif LJ_TARGET_WINDOWS
+    static void *ll_load(const char *path, int gl)
+    {
+      void *lib = (void *)LoadLibraryA(path);
+      return lib;
+    }
 
-
-static void *ll_load(const char *path, int gl)
-{
-  void *lib = (void *)LoadLibraryA(path);
-  return lib;
-}
-
-static void *ll_sym(void *lib, const char *sym)
-{
-  void *f = (void *)GetProcAddress((HINSTANCE)lib, sym);
-  return f;
-}
-
+    static void *ll_sym(void *lib, const char *sym)
+    {
+      void *f = (void *)GetProcAddress((HINSTANCE)lib, sym);
+      return f;
+    }
 #else
-#error "what os is this?"
+    #error "what os is this?"
 #endif
 
 void *RealLuaShared = 0;
@@ -135,24 +125,23 @@ const int libopen_base_offset1 = 0x61, libopen_base_offset2 = 0x66;
 
 extern "C" void *lj_lib_cf_gmod_base = 0, *lj_lib_init_gmod_base = 0;
 #if LJ_TARGET_WINDOWS
-INITIALIZER(libopen_base, {
-    if (!RealLuaShared)
-        RealLuaShared = ll_load(MODULE_NAME);
-    void *real_lob = ll_sym(RealLuaShared, "luaopen_base");
+    INITIALIZER(libopen_base, {
+        if (!RealLuaShared)
+            RealLuaShared = ll_load(MODULE_NAME);
+        void *real_lob = ll_sym(RealLuaShared, "luaopen_base");
 
-    char *push_addresses = libopen_base_offset1 + (char *)real_lob;
-    // assert(push_addresses[0] == 0x68) // push offset
-    lj_lib_cf_gmod_base = *(void **)&push_addresses[1];
+        char *push_addresses = libopen_base_offset1 + (char *)real_lob;
+        // assert(push_addresses[0] == 0x68) // push offset
+        lj_lib_cf_gmod_base = *(void **)&push_addresses[1];
 
-    push_addresses = libopen_base_offset2 + (char *)real_lob;
-    // assert(push_addresses[0] == 0x68) // push offset
-    lj_lib_init_gmod_base = *(void **)&push_addresses[1];
-})
+        push_addresses = libopen_base_offset2 + (char *)real_lob;
+        // assert(push_addresses[0] == 0x68) // push offset
+        lj_lib_init_gmod_base = *(void **)&push_addresses[1];
+    })
+    // FF 25 xx xx xx xx = jmp dword ptr [xxxxxxxx]
 #else
-#error "need to do this os"
+    #error "need to do this os"
 #endif
-
-// FF 25 xx xx xx xx = jmp dword ptr [xxxxxxxx]
 
 REDIRECT(CreateInterface)
 IMPORT_INJECT(luaJIT_setmode)
