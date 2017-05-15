@@ -570,7 +570,7 @@ E= @echo
 # Make targets.
 ##############################################################################
 
-default all:	$(TARGET_T)
+default all:	$(TARGET_T) hijack.o
 
 amalg:
 	@grep "^[+|]" ljamalg.c

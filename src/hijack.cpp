@@ -22,8 +22,6 @@ extern "C" {
 
 static void *ll_load(const char *path, int gl = 0);
 static void *ll_sym(void *lib, const char *sym);
-enum EProtection;
-static void ll_mprotect(void *addr, size_t size, EProtection prot);
 
 #if LJ_TARGET_WINDOWS
     #include <Windows.h>

@@ -211,6 +211,8 @@ lj_vmevent.o: lj_vmevent.c lj_obj.h lua.h luaconf.h lj_def.h lj_arch.h \
 lj_vmmath.o: lj_vmmath.c lj_obj.h lua.h luaconf.h lj_def.h lj_arch.h \
  lj_ir.h lj_vm.h
 luajit.o: luajit.c lua.h luaconf.h lauxlib.h lualib.h luajit.h lj_arch.h
+host/hijack.o: hijack.cpp lua.h luaconf.h luajit.h lauxlib.h lualib.h \
+ lj_arch.h management.cpp management.h
 host/management.o: management.cpp management.h
 host/buildvm_asm.o: host/buildvm_asm.c host/buildvm.h lj_def.h lua.h luaconf.h \
  lj_arch.h lj_bc.h lj_def.h lj_arch.h
