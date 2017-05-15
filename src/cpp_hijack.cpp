@@ -1,90 +1,30 @@
-
-#ifndef LUA_BUILD_AS_DLL
-#error "only compatible with dll"
+#ifdef LUA_BUILD_AS_DLL
+#undef LUA_BUILD_AS_DLL
 #endif
 
-#undef LUA_BUILD_AS_DLL
-
+// make sure to load this in c++ to get ILuaBase for easy stuff
 extern "C" {
 #include "lua.h"
+#include "lj_obj.h"
 #include "luajit.h"
 #include "lauxlib.h"
-#include "lualib.h"
-#include "lj_arch.h"
 #include "luaconf.h"
+#include "lualib.h"
 }
 
+#include "cpp_arch.h"
+#include "gmod/luainterface.h"
 
-// Use here to include things automatically so we don't need to change the makefiles and build scripts
-#include "management.cpp"
 
-#define LUA_BUILD_AS_DLL
-
-static void *ll_load(const char *path, int gl = 0);
-static void *ll_sym(void *lib, const char *sym);
-enum EProtection;
-static void ll_mprotect(void *addr, size_t size, EProtection prot);
-
-#if LJ_TARGET_WINDOWS
-#include <Windows.h>
-enum EProtection {
-    PROTECTION_READWRITE = PAGE_READWRITE,
-    PROTECTION_READEXEC  = PAGE_EXECUTE_READ
-};
-static void ll_mprotect(void *addr, size_t size, EProtection prot)
+extern "C" void lua_init_stack_gmod(lua_State *L1, lua_State *L)
 {
-    DWORD lpflOldProtect;
-    VirtualProtect(addr, size, prot, &lpflOldProtect);
+    if (L && L != L1)
+    {
+        L1->luabase = L->luabase;
+        if (L->luabase) 
+            ((GarrysMod::Lua::ILuaBase *)L->luabase)->SetState(L);
+    }
 }
-
-
-#elif LJ_TARGET_POSIX
-#include <sys/mman.h>
-enum EProtection {
-    PROTECTION_READWRITE = PROT_READ | PROT_WRITE,
-    PROTECTION_READEXEC  = PROT_READ | PROT_EXEC
-};
-static void ll_mprotect(void *addr, size_t size, EProtection prot)
-{
-    mprotect(addr, size, (int)prot);
-}
-#endif
-
-
-
-#if LJ_TARGET_DLOPEN
-#include <dlfcn.h>
-
-static void *ll_load(const char *path, int gl)
-{
-  void *lib = dlopen(path, RTLD_NOW | (gl ? RTLD_GLOBAL : RTLD_LOCAL));
-  return lib;
-}
-
-static void *ll_sym(void *lib, const char *sym)
-{
-  void *f = (void *)dlsym(lib, sym);
-  return f;
-}
-
-#elif LJ_TARGET_WINDOWS
-
-
-static void *ll_load(const char *path, int gl)
-{
-  void *lib = (void *)LoadLibraryA(path);
-  return lib;
-}
-
-static void *ll_sym(void *lib, const char *sym)
-{
-  void *f = (void *)GetProcAddress((HINSTANCE)lib, sym);
-  return f;
-}
-
-#else
-#error "what os is this?"
-#endif
 
 void *RealLuaShared = 0;
 void *RealDetoured  = 0;
@@ -94,21 +34,20 @@ void *RealDetoured  = 0;
 #define REDIRECT(x) \
 void * real##x = 0; \
 extern "C" __declspec(dllexport) __declspec(naked) void x() { \
-    __asm { pushad } \
+    ll_asm(pushad) \
     if (!real##x) { \
         if (!RealDetoured) \
             RealDetoured = ll_load("real_datacache.dll", 0); \
         real##x = ll_sym(RealDetoured, #x); \
     } \
-    __asm { popad } \
-    __asm { jmp real##x } \
+    ll_asm(popad) \
+    ll_jmp(real##x) \
 }
 
 #define IMPORT_INJECT(original) \
 const void * hackptr_##original = &original; \
 struct strux##original { \
     strux##original() { \
-        printf("%s\n", #original); \
         void *real = 0; \
         if (!real) { \
             if (!RealLuaShared) \

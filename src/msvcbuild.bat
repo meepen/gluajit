@@ -70,15 +70,15 @@ buildvm -m folddef -o lj_folddef.h lj_opt_fold.c
 :NODEBUG
 @if "%1"=="amalg" goto :AMALGDLL
 @if "%1"=="static" goto :STATIC
-%LJCOMPILE% /MD /DLUA_BUILD_AS_DLL lj_*.c lib_*.c hijack.cpp
+%LJCOMPILE% /MD /DLUA_BUILD_AS_DLL lj_*.c lib_*.c cpp_*.cpp
 @if errorlevel 1 goto :BAD
-%LJLINK% /DLL /out:%LJDLLNAME% lj_*.obj lib_*.obj hijack.obj
+%LJLINK% /DLL /out:%LJDLLNAME% lj_*.obj lib_*.obj cpp_*.obj
 @if errorlevel 1 goto :BAD
 @goto :MTDLL
 :STATIC
-%LJCOMPILE% lj_*.c lib_*.c hijack.cpp
+%LJCOMPILE% lj_*.c lib_*.c cpp_*.cpp
 @if errorlevel 1 goto :BAD
-%LJLIB% /OUT:%LJLIBNAME% lj_*.obj lib_*.obj hijack.obj
+%LJLIB% /OUT:%LJLIBNAME% lj_*.obj lib_*.obj cpp_*.obj
 @if errorlevel 1 goto :BAD
 @goto :MTDLL
 :AMALGDLL

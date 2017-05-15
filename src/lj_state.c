@@ -117,6 +117,8 @@ void LJ_FASTCALL lj_state_growstack1(lua_State *L)
   lj_state_growstack(L, 1);
 }
 
+void lua_init_stack_gmod(lua_State *L1, lua_State *L);
+
 /* Allocate basic stack for new state. */
 static void stack_init(lua_State *L1, lua_State *L)
 {
@@ -129,6 +131,7 @@ static void stack_init(lua_State *L1, lua_State *L)
   setthreadV(L1, st, L1);  /* Needed for curr_funcisL() on empty stack. */
   while (st < stend)  /* Clear new slots. */
     setnilV(st++);
+  lua_init_stack_gmod(L1, L);
 }
 
 /* -- State handling ------------------------------------------------------ */
@@ -277,8 +280,6 @@ LUA_API void lua_close(lua_State *L)
 lua_State *lj_state_new(lua_State *L)
 {
   lua_State *L1 = lj_mem_newobj(L, lua_State);
-  // garrysmod:
-  memcpy(&L1->_GARRY_VARS, &L->_GARRY_VARS, sizeof L->_GARRY_VARS);
   L1->gct = ~LJ_TTHREAD;
   L1->dummy_ffid = FF_C;
   L1->status = 0;

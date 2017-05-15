@@ -1,5 +1,8 @@
 // We already have lua and friends included - don't include stuff
 extern "C" {
+#include "lua.h"
+#include "lauxlib.h"
+#include "lualib.h"
 #include "management.h"
 #include "setjmp.h"
 }
