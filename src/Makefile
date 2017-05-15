@@ -509,6 +509,10 @@ ifeq (Windows,$(TARGET_SYS))
     TARGET_XCFLAGS+= -DLUA_BUILD_AS_DLL
   endif
 endif
+ifeq (Linux,$(TARGET_SYS))
+  # Ignore some luajit warnings
+  TARGET_XCFLAGS+= -Wno-unused-variable -Wno-misleading-indentation
+endif
 ifeq (Darwin,$(TARGET_SYS))
   LJVM_MODE= machasm
 endif

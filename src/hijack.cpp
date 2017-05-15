@@ -1,9 +1,7 @@
-
-#ifndef LUA_BUILD_AS_DLL
-    #error "only compatible with dll"
+#ifdef LUA_BUILD_AS_DLL
+    #define WAS_LUA_BUILD_AS_DLL
+    #undef LUA_BUILD_AS_DLL
 #endif
-
-#undef LUA_BUILD_AS_DLL
 
 extern "C" {
     #include "lua.h"
@@ -17,7 +15,10 @@ extern "C" {
 // Use here to include things automatically so we don't need to change the makefiles and build scripts
 #include "management.cpp"
 
-#define LUA_BUILD_AS_DLL
+#ifdef WAS_LUA_BUILD_AS_DLL
+    #undef WAS_LUA_BUILD_AS_DLL
+    #define LUA_BUILD_AS_DLL
+#endif
 
 static void *ll_load(const char *path, int gl = 0);
 static void *ll_sym(void *lib, const char *sym);
@@ -139,6 +140,20 @@ extern "C" void *lj_lib_cf_gmod_base = 0, *lj_lib_init_gmod_base = 0;
         lj_lib_init_gmod_base = *(void **)&push_addresses[1];
     })
     // FF 25 xx xx xx xx = jmp dword ptr [xxxxxxxx]
+#elif LJ_TARGET_LINUX
+    INITIALIZER(libopen_base, {
+        if (!RealLuaShared)
+            RealLuaShared = ll_load(MODULE_NAME);
+        void *real_lob = ll_sym(RealLuaShared, "luaopen_base");
+
+        char *push_addresses = libopen_base_offset1 + (char *)real_lob;
+        // assert(push_addresses[0] == 0x68) // push offset
+        lj_lib_cf_gmod_base = *(void **)&push_addresses[1];
+
+        push_addresses = libopen_base_offset2 + (char *)real_lob;
+        // assert(push_addresses[0] == 0x68) // push offset
+        lj_lib_init_gmod_base = *(void **)&push_addresses[1];
+    })
 #else
     #error "need to do this os"
 #endif
