@@ -9,6 +9,10 @@
 **.lib
 **.pdb
 **.exe
+**.ilk
+
+
+.vscode
 
 # Ignore compiled binaries
 src/host/buildvm
