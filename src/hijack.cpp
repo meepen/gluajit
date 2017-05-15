@@ -23,18 +23,7 @@ extern "C" {
 static void *ll_load(const char *path, int gl = 0);
 static void *ll_sym(void *lib, const char *sym);
 
-#if LJ_TARGET_WINDOWS
-    #include <Windows.h>
-    enum EProtection {
-        PROTECTION_READWRITE = PAGE_READWRITE,
-        PROTECTION_READEXEC  = PAGE_EXECUTE_READ
-    };
-    static void ll_mprotect(void *addr, size_t size, EProtection prot)
-    {
-        DWORD lpflOldProtect;
-        VirtualProtect(addr, size, prot, &lpflOldProtect);
-    }
-#elif LJ_TARGET_POSIX
+#if LJ_TARGET_POSIX
     #include <sys/mman.h>
     enum EProtection {
         PROTECTION_READWRITE = PROT_READ | PROT_WRITE,
@@ -44,9 +33,7 @@ static void *ll_sym(void *lib, const char *sym);
     {
         mprotect(addr, size, (int)prot);
     }
-#endif
 
-#if LJ_TARGET_DLOPEN
     #include <dlfcn.h>
     static void *ll_load(const char *path, int gl)
     {
@@ -59,7 +46,23 @@ static void *ll_sym(void *lib, const char *sym);
       void *f = (void *)dlsym(lib, sym);
       return f;
     }
-#elif LJ_TARGET_WINDOWS
+#endif
+
+void *RealLuaShared = 0;
+void *RealDetoured  = 0;
+
+#if LJ_TARGET_WINDOWS
+    #include <Windows.h>
+    enum EProtection {
+        PROTECTION_READWRITE = PAGE_READWRITE,
+        PROTECTION_READEXEC  = PAGE_EXECUTE_READ
+    };
+    static void ll_mprotect(void *addr, size_t size, EProtection prot)
+    {
+        DWORD lpflOldProtect;
+        VirtualProtect(addr, size, prot, &lpflOldProtect);
+    }
+
     static void *ll_load(const char *path, int gl)
     {
       void *lib = (void *)LoadLibraryA(path);
@@ -71,48 +74,55 @@ static void *ll_sym(void *lib, const char *sym);
       void *f = (void *)GetProcAddress((HINSTANCE)lib, sym);
       return f;
     }
+
+    #define MODULE_NAME "garrysmod/bin/lua_shared.dll"
+
+    // FF 25 xx xx xx xx = jmp dword ptr [xxxxxxxx]
+    #define IMPORT_INJECT(original) \
+    const void * hackptr_##original = &original; \
+    struct strux##original { \
+        strux##original() { \
+            printf("%s\n", #original); \
+            void *real = 0; \
+            if (!real) { \
+                if (!RealLuaShared) \
+                    RealLuaShared = ll_load(MODULE_NAME); \
+                real = ll_sym(RealLuaShared, #original); \
+                ll_mprotect(real, 7, PROTECTION_READWRITE); \
+                *(unsigned char *)real = 0x90; \
+                *(1 + (unsigned char *)real) = 0xFF; \
+                *(2 + (unsigned char *)real) = 0x25; \
+                *(void ***)(3 + (unsigned char *)real) = (void **)&hackptr_##original; \
+                ll_mprotect(real, 7, PROTECTION_READEXEC); \
+            } \
+        } \
+    }; \
+    static strux##original construct_##original;
+
+    #define REDIRECT(x) \
+    void * real##x = 0; \
+    extern "C" __declspec(dllexport) __declspec(naked) void x() { \
+        __asm { pushad } \
+        if (!real##x) { \
+            if (!RealDetoured) \
+                RealDetoured = ll_load("real_datacache.dll", 0); \
+            real##x = ll_sym(RealDetoured, #x); \
+        } \
+        __asm { popad } \
+        __asm { jmp real##x } \
+    }
+#elif LJ_TARGET_LINUX
+    #define MODULE_NAME "garrysmod/bin/lua_shared.so"
+
+    #define REDIRECT(x) \
+    void * real##x = 0; \
+    extern "C" void x() {};
+
+    #define IMPORT_INJECT(original)
+    // TODO: Insert a JMP detour to our 'local' symbol into the 'real' lua_shared symbol
 #else
     #error "what os is this?"
 #endif
-
-void *RealLuaShared = 0;
-void *RealDetoured  = 0;
-
-#define MODULE_NAME "garrysmod/bin/lua_shared.dll"
-
-#define REDIRECT(x) \
-void * real##x = 0; \
-extern "C" __declspec(dllexport) __declspec(naked) void x() { \
-    __asm { pushad } \
-    if (!real##x) { \
-        if (!RealDetoured) \
-            RealDetoured = ll_load("real_datacache.dll", 0); \
-        real##x = ll_sym(RealDetoured, #x); \
-    } \
-    __asm { popad } \
-    __asm { jmp real##x } \
-}
-
-#define IMPORT_INJECT(original) \
-const void * hackptr_##original = &original; \
-struct strux##original { \
-    strux##original() { \
-        printf("%s\n", #original); \
-        void *real = 0; \
-        if (!real) { \
-            if (!RealLuaShared) \
-                RealLuaShared = ll_load(MODULE_NAME); \
-            real = ll_sym(RealLuaShared, #original); \
-            ll_mprotect(real, 7, PROTECTION_READWRITE); \
-            *(unsigned char *)real = 0x90; \
-            *(1 + (unsigned char *)real) = 0xFF; \
-            *(2 + (unsigned char *)real) = 0x25; \
-            *(void ***)(3 + (unsigned char *)real) = (void **)&hackptr_##original; \
-            ll_mprotect(real, 7, PROTECTION_READEXEC); \
-        } \
-    } \
-}; \
-static strux##original construct_##original;
 
 #define INITIALIZER(name, def) \
 struct init##name { \
@@ -122,7 +132,7 @@ static init##name initialier_##name;
 
 const int libopen_base_offset1 = 0x61, libopen_base_offset2 = 0x66;
 
-extern "C" void *lj_lib_cf_gmod_base = 0, *lj_lib_init_gmod_base = 0;
+extern "C" void *lj_lib_cf_gmod_base, *lj_lib_init_gmod_base;
 #if LJ_TARGET_WINDOWS
     INITIALIZER(libopen_base, {
         if (!RealLuaShared)
@@ -137,7 +147,6 @@ extern "C" void *lj_lib_cf_gmod_base = 0, *lj_lib_init_gmod_base = 0;
         // assert(push_addresses[0] == 0x68) // push offset
         lj_lib_init_gmod_base = *(void **)&push_addresses[1];
     })
-    // FF 25 xx xx xx xx = jmp dword ptr [xxxxxxxx]
 #elif LJ_TARGET_LINUX
     INITIALIZER(libopen_base, {
         if (!RealLuaShared)

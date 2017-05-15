@@ -25,10 +25,10 @@ NODOTABIVER= 51
 # with "make clean", followed by "make" if you change any options.
 #
 # LuaJIT builds as a native 32 or 64 bit binary by default.
-CC= gcc
+#CC= gcc
 #
 # Use this if you want to force a 32 bit build on a 64 bit multilib OS.
-#CC= gcc -m32
+CC= gcc -m32
 #
 # Since the assembler part does NOT maintain a frame pointer, it's pointless
 # to slow down the C part by not omitting it. Debugging, tracebacks and
@@ -206,7 +206,7 @@ TARGET_TCFLAGS= $(CCOPTIONS) $(TARGET_XCFLAGS) $(TARGET_FLAGS) $(TARGET_CFLAGS)
 TARGET_ACFLAGS= $(CCOPTIONS) $(TARGET_XCFLAGS) $(TARGET_FLAGS) $(TARGET_CFLAGS)
 TARGET_ALDFLAGS= $(LDOPTIONS) $(TARGET_XLDFLAGS) $(TARGET_FLAGS) $(TARGET_LDFLAGS)
 TARGET_ASHLDFLAGS= $(LDOPTIONS) $(TARGET_XSHLDFLAGS) $(TARGET_FLAGS) $(TARGET_SHLDFLAGS)
-TARGET_ALIBS= $(TARGET_XLIBS) $(LIBS) $(TARGET_LIBS)
+TARGET_ALIBS= $(TARGET_XLIBS) $(LIBS) $(TARGET_LIBS) hijack.o
 
 TARGET_TESTARCH=$(shell $(TARGET_CC) $(TARGET_TCFLAGS) -E lj_arch.h -dM)
 ifneq (,$(findstring LJ_TARGET_X64 ,$(TARGET_TESTARCH)))
@@ -570,7 +570,10 @@ E= @echo
 # Make targets.
 ##############################################################################
 
-default all:	$(TARGET_T) hijack.o
+default all:	hijack $(TARGET_T)
+
+hijack:
+	g++ -m32 $(TARGET_ACFLAGS) -c -o hijack.o hijack.cpp
 
 amalg:
 	@grep "^[+|]" ljamalg.c
