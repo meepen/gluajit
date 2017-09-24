@@ -30,8 +30,7 @@ README for gluajit 2.0.4
 
 To install on windows:
 
-1. Move datacache(\_srv).dll to hl2.exe's folder
-2. rename datacache.dll to real_datacache.dll
-3. Compile with msvcbuild in a visual studio command prompt
-4. Place lua51.dll in the old datacache(\_srv).dll position with the name datacache(\_srv).dll
-5. Launch Garry's Mod
+1. rename lua\_shared.dll to real\_lua\_shared.lua
+2. Compile with msvcbuild in a visual studio command prompt
+3. Place lua51.dll in the old lua\_shared.dll position with the name lua\_shared.dll
+4. Launch Garry's Mod

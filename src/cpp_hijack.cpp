@@ -4,8 +4,8 @@
 
 // make sure to load this in c++ to get ILuaBase for easy stuff
 extern "C" {
-#include "lua.h"
 #include "lj_obj.h"
+#include "lua.h"
 #include "luajit.h"
 #include "lauxlib.h"
 #include "luaconf.h"
@@ -14,6 +14,7 @@ extern "C" {
 
 #include "cpp_arch.h"
 #include "gmod/luainterface.h"
+#include "cpp_common.hpp"
 
 
 extern "C" void lua_init_stack_gmod(lua_State *L1, lua_State *L)
@@ -29,7 +30,6 @@ extern "C" void lua_init_stack_gmod(lua_State *L1, lua_State *L)
 void *RealLuaShared = 0;
 void *RealDetoured  = 0;
 
-#define MODULE_NAME "garrysmod/bin/lua_shared.dll"
 
 #define REDIRECT(x) \
 void * real##x = 0; \
@@ -37,7 +37,7 @@ extern "C" __declspec(dllexport) __declspec(naked) void x() { \
     ll_asm(pushad) \
     if (!real##x) { \
         if (!RealDetoured) \
-            RealDetoured = ll_load("real_datacache.dll", 0); \
+            RealDetoured = ll_load(MODULE_NAME, 0); \
         real##x = ll_sym(RealDetoured, #x); \
     } \
     ll_asm(popad) \
@@ -45,7 +45,8 @@ extern "C" __declspec(dllexport) __declspec(naked) void x() { \
 }
 
 #define IMPORT_INJECT(original) \
-const void * hackptr_##original = &original; \
+void original_##original(void) { ll_jmp(original); } \
+const void * hackptr_##original = &original_##original; \
 struct strux##original { \
     strux##original() { \
         void *real = 0; \
@@ -64,34 +65,6 @@ struct strux##original { \
 }; \
 static strux##original construct_##original;
 
-#define INITIALIZER(name, def) \
-struct init##name { \
-    init##name() def \
-}; \
-static init##name initialier_##name;
-
-const int libopen_base_offset1 = 0x61, libopen_base_offset2 = 0x66;
-
-extern "C" void *lj_lib_cf_gmod_base = 0, *lj_lib_init_gmod_base = 0;
-#if LJ_TARGET_WINDOWS
-INITIALIZER(libopen_base, {
-    if (!RealLuaShared)
-        RealLuaShared = ll_load(MODULE_NAME);
-    void *real_lob = ll_sym(RealLuaShared, "luaopen_base");
-
-    char *push_addresses = libopen_base_offset1 + (char *)real_lob;
-    // assert(push_addresses[0] == 0x68) // push offset 
-    lj_lib_cf_gmod_base = *(void **)&push_addresses[1];
-
-    push_addresses = libopen_base_offset2 + (char *)real_lob;
-    // assert(push_addresses[0] == 0x68) // push offset 
-    lj_lib_init_gmod_base = *(void **)&push_addresses[1];
-})
-#else
-#error "need to do this os"
-#endif
-
-// FF 25 xx xx xx xx = jmp dword ptr [xxxxxxxx]
 
 REDIRECT(CreateInterface)
 IMPORT_INJECT(luaJIT_setmode)

@@ -218,6 +218,8 @@ LUALIB_API void luaL_checkany(lua_State *L, int idx)
     lj_err_arg(L, idx, LJ_ERR_NOVAL);
 }
 
+void hijack_Print(lua_State *state, const char *str);
+
 static char gm_typename[0x80];
 #include <stdio.h>
 static const char *gm_lua_typename(lua_State *L, int stackpos)
@@ -236,7 +238,7 @@ static const char *gm_lua_typename(lua_State *L, int stackpos)
     }
     else
     {
-      //Msg("Error - no MetaName string type for userdata (AGH!)\n");
+      hijack_Print(L, "Error - no MetaName string type for userdata (AGH!)\n");
     }
     lua_pop(L, 1);
   }

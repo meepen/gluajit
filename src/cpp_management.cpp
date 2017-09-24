@@ -1,4 +1,6 @@
-// We already have lua and friends included - don't include stuff
+#ifdef LUA_BUILD_AS_DLL
+#undef LUA_BUILD_AS_DLL
+#endif
 extern "C" {
 #include "lua.h"
 #include "lauxlib.h"
@@ -52,7 +54,7 @@ extern "C" void hijack_CreateManagementState(void) {
     lua_atpanic(MainState, panicfn);
     luaL_openlibs(MainState);
     {
-        // package.path = "./management/?.lua"..package.path
+        // package.path = "./management/?.lua;"..package.path
         lua_getfield(MainState, LUA_GLOBALSINDEX, "package");
         lua_pushstring(MainState, "." LUA_DIRSEP "management" LUA_DIRSEP "?.lua;");
         lua_getfield(MainState, -2, "path");

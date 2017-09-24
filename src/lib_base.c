@@ -464,12 +464,18 @@ LJLIB_CF(collectgarbage)
 }
 
 /* -- Base library: miscellaneous functions ------------------------------- */
-
+typedef struct _UserData
+{
+    void*         data;
+    unsigned char type;
+} UserData;
 LJLIB_PUSH(top-2)  /* Upvalue holds weak table. */
 LJLIB_CF(newproxy)
 {
   lua_settop(L, 1);
-  lua_newuserdata(L, 0);
+  UserData *ud = (UserData *)lua_newuserdata(L, sizeof(UserData));
+  ud->data = 0;
+  ud->type = -1;
   if (lua_toboolean(L, 1) == 0) {  /* newproxy(): without metatable. */
     return 1;
   } else if (lua_isboolean(L, 1)) {  /* newproxy(true): with metatable. */
@@ -491,6 +497,8 @@ LJLIB_CF(newproxy)
   lua_setmetatable(L, 2);
   return 1;
 }
+
+void hijack_Print(lua_State *state, const char *str);
 
 LJLIB_PUSH("tostring")
 LJLIB_CF(print)
@@ -533,10 +541,10 @@ LJLIB_CF(print)
       L->top--;
     }
     if (i)
-      putchar('\t');
-    fwrite(str, 1, size, stdout);
+      hijack_Print(L, "\t");
+    hijack_Print(L, str);
   }
-  putchar('\n');
+  hijack_Print(L, "\n");
   return 0;
 }
 
@@ -682,10 +690,7 @@ LUALIB_API int luaopen_base(lua_State *L)
   settabV(L, lj_tab_setstr(L, env, lj_str_newlit(L, "_G")), env);
   lua_pushliteral(L, LUA_VERSION);  /* top-3. */
   newproxy_weaktable(L);  /* top-2. */
-  if (hijack_LibOpen(L, LIBTYPE_BASE))
-    LJ_LIB_REG(L, "_G", base);
-  if (hijack_LibOpen(L, LIBTYPE_GMODBASE))
-    LJ_LIB_REG(L, "_G", gmod_base);
+  LJ_LIB_REG(L, "_G", base);
   LJ_LIB_REG(L, LUA_COLIBNAME, coroutine);
   return 2;
 }
