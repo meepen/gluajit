@@ -37,7 +37,7 @@ extern "C" __declspec(dllexport) __declspec(naked) void x() { \
     ll_asm(pushad) \
     if (!real##x) { \
         if (!RealDetoured) \
-            RealDetoured = ll_load(MODULE_NAME, 0); \
+            RealDetoured = ll_load("real_datacache.dll", 0); \
         real##x = ll_sym(RealDetoured, #x); \
     } \
     ll_asm(popad) \
